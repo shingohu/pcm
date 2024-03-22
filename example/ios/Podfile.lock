@@ -1,0 +1,46 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_to_airplay (0.0.1):
+    - Flutter
+    - Mux-Stats-AVPlayer
+  - Mux-Stats-AVPlayer (3.5.1):
+    - Mux-Stats-Core (= 4.6.0)
+  - Mux-Stats-Core (4.6.0)
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - pcm (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_to_airplay (from `.symlinks/plugins/flutter_to_airplay/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - pcm (from `.symlinks/plugins/pcm/ios`)
+
+SPEC REPOS:
+  trunk:
+    - Mux-Stats-AVPlayer
+    - Mux-Stats-Core
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_to_airplay:
+    :path: ".symlinks/plugins/flutter_to_airplay/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  pcm:
+    :path: ".symlinks/plugins/pcm/ios"
+
+SPEC CHECKSUMS:
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_to_airplay: 3194fe6e4ca6ba1d9529c3c4194c32b9610d990f
+  Mux-Stats-AVPlayer: 1b1a877e5d8b57ca22e0717fa0a4eefef7529c40
+  Mux-Stats-Core: 53902e414f077b2239ea10d909a4cf072c0d4d5c
+  path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c
+  pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
+
+PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796
+
+COCOAPODS: 1.15.2
