@@ -157,7 +157,7 @@ public class PCMPlayer {
                     return;
                 }
                 synchronized (this.buffers) {
-                    if (buffers.size() > readBufferIndex && buffers.size() > 3) {
+                    if (buffers.size() > readBufferIndex) {
                         if (mPlayer != null && !setToStop) {
                             byte[] data = buffers.get(readBufferIndex);
                             mPlayer.write(data, 0, data.length);
@@ -167,9 +167,8 @@ public class PCMPlayer {
                         release();
                         return;
                     } else {
-                        ///没有数据的时候就播放一个5ms的静音数据
-                        ///华为手机上会报错,然后sco通话时 会导致耳机录不到音
-                        ///但是添加了 静音 戴耳机时又会卡顿
+                        ///没有数据的时候就播放一个1ms的静音数据
+                        ///华为手机上需要录音和播放都开启才能通过SCO录音播放
                         if (mPlayer != null && !setToStop) {
                             if (mPlayer.getStreamType() == AudioManager.STREAM_VOICE_CALL) {
                                 int length = 80 / 5;
