@@ -68,15 +68,6 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             }
         }, new Handler());
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            audioManager.addOnCommunicationDeviceChangedListener(Executors.newSingleThreadExecutor(), new AudioManager.OnCommunicationDeviceChangedListener() {
-                @Override
-                public void onCommunicationDeviceChanged(@Nullable AudioDeviceInfo device) {
-                    notifyCurrentAudioDeviceChanged();
-                }
-            });
-        }
-
     }
 
     public void enumerateDevices() {
@@ -264,19 +255,17 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     }
 
     private void stopBluetoothSco() {
-        if (this.scoReceiver != null) {
-            unRegisterSco();
-        }
         if (this.scoState == BluetoothScoState.CONNECTED) {
-            audioManager.setBluetoothScoOn(false);
             ///android11
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 audioManager.clearCommunicationDevice();
             } else {
                 audioManager.stopBluetoothSco();
             }
-            setScoState(BluetoothScoState.DISCONNECTED);
+            audioManager.setBluetoothScoOn(false);
             Log.e("AudioManager", "停止SCO");
+        } else {
+            unRegisterSco();
         }
     }
 
@@ -310,7 +299,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
                             if (scoState == BluetoothScoState.CONNECTED) {
                                 Log.e("AudioManager", "SCO已断开");
-                                stopBluetoothSco();
+                                //stopBluetoothSco();
+                                setScoState(BluetoothScoState.DISCONNECTED);
+                                unRegisterSco();
                             }
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_ERROR) {
                             stopBluetoothSco();
@@ -384,9 +375,15 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         } else if ("getCurrentAudioDevice".equals(method)) {
             result.success(getCurrentAudioDevice());
         } else if ("setCurrentAudioDevice".equals(method)) {
-            int index = (int) call.arguments;
-            setCurrentAudioDevice(index);
-            result.success(true);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    int index = (int) call.arguments;
+                    setCurrentAudioDevice(index);
+                    result.success(true);
+                }
+            }).start();
+
         }
     }
 

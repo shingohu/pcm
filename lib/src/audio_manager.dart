@@ -21,6 +21,14 @@ enum AudioDeviceType {
   BLUETOOTHA2DP
 }
 
+AudioDevice Earpiece = AudioDevice(
+    name: AudioDeviceType.EARPIECE.name, type: AudioDeviceType.EARPIECE);
+AudioDevice Speaker = AudioDevice(
+    name: AudioDeviceType.SPEAKER.name, type: AudioDeviceType.SPEAKER);
+AudioDevice WiredHeadset = AudioDevice(
+    name: AudioDeviceType.WIREDHEADSET.name,
+    type: AudioDeviceType.WIREDHEADSET);
+
 class AudioDevice {
   final String name;
   final AudioDeviceType type;
@@ -262,6 +270,19 @@ class _AudioManager {
   ///设置当前音频输出设备
   Future<void> setCurrentAudioDevice(AudioDeviceType type) async {
     if (type != currentAudioDevice.type) {
+      if (type == AudioDeviceType.WIREDHEADSET && isWiredHeadsetOn) {
+        _notifyCurrentAudioDeviceChanged(WiredHeadset);
+      } else if (type == AudioDeviceType.SPEAKER) {
+        _notifyCurrentAudioDeviceChanged(Speaker);
+      } else if (type == AudioDeviceType.EARPIECE) {
+        _notifyCurrentAudioDeviceChanged(Earpiece);
+      } else if (type == AudioDeviceType.BLUETOOTHHEADSET &&
+          isBluetoothHeadsetOn) {
+        _notifyCurrentAudioDeviceChanged(AudioDevice(
+            name: bluetoothHeadsetName ?? "",
+            type: AudioDeviceType.BLUETOOTHHEADSET));
+      }
+
       await _channel.invokeMethod("setCurrentAudioDevice", type.index);
     }
   }
