@@ -145,9 +145,15 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "getCurrentAudioDevice"){
             result(self.getCurrentAudioDevice())
         }else if(method == "setCurrentAudioDevice"){
-            let index = call.arguments as! Int;
-            self.setCurrentAudioDevice(type: index)
-            result(true)
+            DispatchQueue.global(qos: .userInitiated).async {
+                let index = call.arguments as! Int;
+                self.setCurrentAudioDevice(type: index)
+                DispatchQueue.main.async{
+                    result(true)
+                }
+            }
+            
+           
         }
         
         else if("pcm2wav" == method){
