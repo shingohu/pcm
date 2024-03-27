@@ -182,7 +182,7 @@ class _CallPageState extends State<CallPage> {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            if (userAirPlayOnIos)
+            if (userAirPlayOnIos && Platform.isIOS)
               AirPlayRoutePickerView(
                 height: 60,
                 width: 60,
@@ -190,10 +190,10 @@ class _CallPageState extends State<CallPage> {
                 activeTintColor: Colors.white,
               ),
             IgnorePointer(
-              ignoring: userAirPlayOnIos,
+              ignoring: userAirPlayOnIos && Platform.isIOS,
               child: GestureDetector(
                 onTap: () {
-                  if (Platform.isAndroid && userAirPlayOnIos) {
+                  if (Platform.isAndroid || !userAirPlayOnIos) {
                     showDialog(
                         context: context,
                         builder: (ctx) {
