@@ -73,8 +73,8 @@ public class PCMPlayer {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 mPlayer = new AudioTrack.Builder()
                         .setAudioAttributes(new AudioAttributes.Builder()
-//                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-//                                .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
                                 .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
                                 .build())
                         .setTransferMode(AudioTrack.MODE_STREAM)
@@ -142,15 +142,11 @@ public class PCMPlayer {
             return;
         }
         setToStop = false;
+        mPlayer.play();
         Log.e(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            if (mPlayer != null) {
-                if (!mAudioPlayingRunner.isInterrupted() && !setToStop && mPlayer.getPlayState() != AudioTrack.PLAYSTATE_PLAYING) {
-                    mPlayer.play();
-                }
-            }
             while (true) {
                 if (mPlayer == null) {
                     // Log.e(TAG, "播放器已经销毁,退出播放");

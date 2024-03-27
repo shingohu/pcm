@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -60,7 +61,15 @@ class _CallPageState extends State<CallPage> {
     }
   }
 
+  bool isChangeAudioDevice = false;
+  Timer? changeAudioDeviceTimer;
+
   void onCurrentAudioDeviceChanged() {
+    isChangeAudioDevice = true;
+    changeAudioDeviceTimer?.cancel();
+    changeAudioDeviceTimer = Timer(Duration(milliseconds: 50), () {
+      isChangeAudioDevice = false;
+    });
     setState(() {});
   }
 
@@ -366,14 +375,22 @@ class _CallPageState extends State<CallPage> {
   Future<void> startCall() async {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
-      await AudioManager.startVoiceChatMode(defaultToSpeaker: defaultToSpeaker);
-      PCMRecorder.start(onData: (audio) {
-        if (audio != null) {
-          if (!isMute) {
-            PCMPlayer.start(audio);
-          }
-        }
-      });
+      AudioManager.startVoiceChatMode(defaultToSpeaker: defaultToSpeaker);
+      int startTime = DateTime.now().millisecondsSinceEpoch;
+      int? endTime;
+      PCMRecorder.start(
+          preFrameSize: 640,
+          onData: (audio) {
+            if (audio != null) {
+              if (endTime == null) {
+                endTime = DateTime.now().millisecondsSinceEpoch;
+                print("第一帧数据=>${endTime! - startTime}");
+              }
+              if (!isMute && !isChangeAudioDevice) {
+                PCMPlayer.start(audio);
+              }
+            }
+          });
       this.isStart = true;
       setState(() {});
     } else {
