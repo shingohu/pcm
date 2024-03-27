@@ -384,7 +384,7 @@ class _CallPageState extends State<CallPage> {
             if (audio != null) {
               if (endTime == null) {
                 endTime = DateTime.now().millisecondsSinceEpoch;
-                print("第一帧数据=>${endTime! - startTime}");
+               // print("第一帧数据=>${endTime! - startTime}");
               }
               if (!isMute && !isChangeAudioDevice) {
                 PCMPlayer.start(audio);

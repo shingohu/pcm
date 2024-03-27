@@ -143,7 +143,7 @@ public class PCMPlayer {
         }
         setToStop = false;
         mPlayer.play();
-        Log.e(TAG, "开始播放");
+       // Log.e(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);

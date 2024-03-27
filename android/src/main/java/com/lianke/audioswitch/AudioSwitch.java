@@ -194,7 +194,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     public void openSpeaker(boolean open) {
-        if (!isSpeakerOn() && open) {
+        if (open) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
                 for (AudioDeviceInfo device : devices) {
@@ -207,7 +207,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 audioManager.setSpeakerphoneOn(true);
             }
             Log.e("AudioManager", "打开扬声器");
-        } else if (isSpeakerOn() && !open) {
+        } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 audioManager.clearCommunicationDevice();
             } else {
@@ -236,12 +236,10 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         }
                     }
                     if (scoDevice != null) {
-                        Log.e("AudioManager", "开启SCO");
                         setScoState(BluetoothScoState.CONNECTING);
                         audioManager.setCommunicationDevice(scoDevice);
                     }
                 } else {
-                    Log.e("AudioManager", "开启SCO");
                     setScoState(BluetoothScoState.CONNECTING);
                     audioManager.startBluetoothSco();
                 }
@@ -255,14 +253,14 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     }
 
     private void stopBluetoothSco() {
-        if (this.scoState == BluetoothScoState.CONNECTED) {
+        if (this.scoState == BluetoothScoState.CONNECTED || this.scoState == BluetoothScoState.CONNECTING) {
+            audioManager.setBluetoothScoOn(false);
             ///android11
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                audioManager.clearCommunicationDevice();
+                audioManager.stopBluetoothSco();
             } else {
                 audioManager.stopBluetoothSco();
             }
-            audioManager.setBluetoothScoOn(false);
             Log.e("AudioManager", "停止SCO");
         } else {
             unRegisterSco();
@@ -298,17 +296,18 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                             Log.e("AudioManager", "SCO已开启");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
                             if (scoState == BluetoothScoState.CONNECTED) {
+                                audioManager.setBluetoothScoOn(false);
                                 Log.e("AudioManager", "SCO已断开");
-                                //stopBluetoothSco();
                                 setScoState(BluetoothScoState.DISCONNECTED);
                                 unRegisterSco();
                             }
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_ERROR) {
-                            stopBluetoothSco();
+                            audioManager.setBluetoothScoOn(false);
                             setScoState(BluetoothScoState.ERROR);
+                            unRegisterSco();
                             Log.e("AudioManager", "SCO开启失败");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_CONNECTING) {
-
+                            Log.e("AudioManager", "SCO开启中");
                         }
 
                     }
@@ -403,7 +402,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
-            Log.e("AudioManager", "音频焦点->" + focusChange);
+            //Log.e("AudioManager", "音频焦点->" + focusChange);
         }
     };
 
@@ -431,7 +430,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         }
         if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-            Log.e("AudioManager", "MODE->MODE_IN_COMMUNICATION");
+            //Log.e("AudioManager", "MODE->MODE_IN_COMMUNICATION");
         }
     }
 
@@ -441,7 +440,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         }
         if (audioManager.getMode() != AudioManager.MODE_NORMAL) {
             audioManager.setMode(AudioManager.MODE_NORMAL);
-            Log.e("AudioManager", "MODE->MODE_NORMAL");
+            // Log.e("AudioManager", "MODE->MODE_NORMAL");
         }
     }
 
