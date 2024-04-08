@@ -143,7 +143,7 @@ public class PCMPlayer {
         }
         setToStop = false;
         mPlayer.play();
-       // Log.e(TAG, "开始播放");
+        Log.e(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
@@ -166,10 +166,8 @@ public class PCMPlayer {
                         ///没有数据的时候就播放一个1ms的静音数据
                         ///华为手机上需要录音和播放都开启才能通过SCO录音播放
                         if (mPlayer != null && !setToStop) {
-                            if (mPlayer.getStreamType() == AudioManager.STREAM_VOICE_CALL) {
-                                int length = 80 / 5;
-                                mPlayer.write(new byte[length], 0, length);
-                            }
+                            int length = 80 / 5;
+                            mPlayer.write(new byte[length], 0, length);
                         }
                     }
                 }

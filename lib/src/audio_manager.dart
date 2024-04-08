@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -166,31 +166,31 @@ class _AudioManager {
   final _channel = const MethodChannel('pcm/audioManager');
 
   ///请求音频焦点
-  Future<void> _requestAudioFocus() async {
+  Future<void> requestAudioFocus() async {
     return await _channel.invokeMethod("requestAudioFocus");
   }
 
   ///释放音频焦点
-  Future<void> _abandonAudioFocus() async {
+  Future<void> abandonAudioFocus() async {
     return await _channel.invokeMethod("abandonAudioFocus");
   }
 
   ///设置音频模式为通话
-  Future<void> _setAudioModeInCommunication() async {
+  Future<void> setAudioModeInCommunication() async {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod("setAudioModeInCommunication");
     }
   }
 
   ///设置音频模式为正常
-  Future<void> _setAudioModeNormal() async {
+  Future<void> setAudioModeNormal() async {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod("setAudioModeNormal");
     }
   }
 
   ///设置录音和播放模式
-  Future<void> _setPlayAndRecordSession() async {
+  Future<void> setPlayAndRecordSession() async {
     if (Platform.isIOS) {
       ///设置这个之后,iOS当前的路由有可能变化
       await _channel.invokeMethod("setPlayAndRecordSession");
@@ -290,8 +290,8 @@ class _AudioManager {
   ///没有连接耳机之前的情况下 默认是否开启扬声器
   Future<void> startVoiceChatMode({bool defaultToSpeaker = false}) async {
     if (Platform.isAndroid) {
-      _requestAudioFocus();
-      _setAudioModeInCommunication();
+      requestAudioFocus();
+      setAudioModeInCommunication();
       if (isWiredHeadsetOn) {
         setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
       } else if (isBluetoothHeadsetOn) {
@@ -302,7 +302,7 @@ class _AudioManager {
         setCurrentAudioDevice(AudioDeviceType.EARPIECE);
       }
     } else {
-      await _setPlayAndRecordSession();
+      await setPlayAndRecordSession();
       if (isWiredHeadsetOn) {
         setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
       } else if (isBluetoothHeadsetOn) {
@@ -318,15 +318,15 @@ class _AudioManager {
   ///结束语音通话模式
   Future<void> endVoiceChatMode() async {
     if (Platform.isAndroid) {
-      _setAudioModeNormal();
-      _abandonAudioFocus();
+      setAudioModeNormal();
+      abandonAudioFocus();
       if (hasExternalAudioDevice) {
         setCurrentAudioDevice(AudioDeviceType.EARPIECE);
       } else {
         setCurrentAudioDevice(AudioDeviceType.SPEAKER);
       }
     } else {
-      _abandonAudioFocus();
+      abandonAudioFocus();
     }
   }
 }

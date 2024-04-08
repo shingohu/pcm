@@ -106,7 +106,7 @@ public class PCMRecorder {
             if (mAudioRecord != null) {
                 isRecording = true;
                 mAudioRecord.startRecording();
-               // Log.e(TAG, "开始录音");
+                Log.e(TAG, "开始录音");
                 startRecordingRunner();
             } else {
                 Log.e(TAG, "启动录音失败");
@@ -193,7 +193,7 @@ public class PCMRecorder {
             if (noiseSuppressor != null) {
                 int resultCode = noiseSuppressor.setEnabled(true);
                 if (AudioEffect.SUCCESS == resultCode) {
-                   // Log.e(TAG, "---降噪使能成功--");
+                    // Log.e(TAG, "---降噪使能成功--");
                 }
             }
         }
@@ -210,7 +210,7 @@ public class PCMRecorder {
             if (agc != null) {
                 int resultCode = agc.setEnabled(true);
                 if (AudioEffect.SUCCESS == resultCode) {
-                   // Log.e(TAG, "---自动增益使能成功--");
+                    // Log.e(TAG, "---自动增益使能成功--");
                 }
             }
         }
