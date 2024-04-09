@@ -73,7 +73,7 @@ public class PCMPlayer {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 mPlayer = new AudioTrack.Builder()
                         .setAudioAttributes(new AudioAttributes.Builder()
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
                                 .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
                                 .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
                                 .build())
@@ -165,9 +165,10 @@ public class PCMPlayer {
                     } else {
                         ///没有数据的时候就播放一个1ms的静音数据
                         ///华为手机上需要录音和播放都开启才能通过SCO录音播放
+                        ///但是播这个会导致耳机声音卡顿
                         if (mPlayer != null && !setToStop) {
                             int length = 80 / 5;
-                            mPlayer.write(new byte[length], 0, length);
+                            //  mPlayer.write(new byte[length], 0, length);
                         }
                     }
                 }
