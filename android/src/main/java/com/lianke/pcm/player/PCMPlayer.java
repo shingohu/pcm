@@ -1,5 +1,7 @@
 package com.lianke.pcm.player;
 
+import static android.media.AudioTrack.PERFORMANCE_MODE_LOW_LATENCY;
+
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
@@ -50,7 +52,7 @@ public class PCMPlayer {
     private final List<byte[]> buffers = new LinkedList<>();
 
     ///读取缓冲区的下标
-    private volatile int readBufferIndex = 0;
+    private int readBufferIndex = 0;
     private Thread mAudioPlayingRunner = null;
     private volatile boolean setToStop = true;
 
@@ -66,25 +68,43 @@ public class PCMPlayer {
 
     public void init(int sampleRateInHz, boolean voiceCall) {
         if (mPlayer == null) {
-            int mBufferSize = AudioTrack.getMinBufferSize(sampleRateInHz,
-                    DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT);
+            int mBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
+                    DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT));
 
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mPlayer = new AudioTrack.Builder()
-                        .setAudioAttributes(new AudioAttributes.Builder()
-                                .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
-                                .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
-                                .build())
-                        .setTransferMode(AudioTrack.MODE_STREAM)
-                        .setAudioFormat(new AudioFormat.Builder()
-                                .setSampleRate(sampleRateInHz)
-                                .setEncoding(DEFAULT_AUDIO_FORMAT)
-                                .setChannelMask(DEFAULT_CHANNEL_CONFIG)
-                                .build())
-                        .setBufferSizeInBytes(mBufferSize)
-                        .build();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mPlayer = new AudioTrack.Builder()
+                            .setAudioAttributes(new AudioAttributes.Builder()
+                                    .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
+                                    .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
+                                    .build())
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .setAudioFormat(new AudioFormat.Builder()
+                                    .setSampleRate(sampleRateInHz)
+                                    .setEncoding(DEFAULT_AUDIO_FORMAT)
+                                    .setChannelMask(DEFAULT_CHANNEL_CONFIG)
+                                    .build())
+                            .setPerformanceMode(PERFORMANCE_MODE_LOW_LATENCY)
+                            .setBufferSizeInBytes(mBufferSize)
+                            .build();
+                } else {
+                    mPlayer = new AudioTrack.Builder()
+                            .setAudioAttributes(new AudioAttributes.Builder()
+                                    .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
+                                    .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
+                                    .build())
+                            .setTransferMode(AudioTrack.MODE_STREAM)
+                            .setAudioFormat(new AudioFormat.Builder()
+                                    .setSampleRate(sampleRateInHz)
+                                    .setEncoding(DEFAULT_AUDIO_FORMAT)
+                                    .setChannelMask(DEFAULT_CHANNEL_CONFIG)
+                                    .build())
+                            .setBufferSizeInBytes(mBufferSize)
+                            .build();
+                }
             } else {
                 mPlayer = new AudioTrack(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC,
                         sampleRateInHz, //sample rate
@@ -147,32 +167,25 @@ public class PCMPlayer {
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            while (true) {
-                if (mPlayer == null) {
-                    // Log.e(TAG, "播放器已经销毁,退出播放");
-                    return;
-                }
-                synchronized (this.buffers) {
-                    if (buffers.size() > readBufferIndex) {
-                        if (mPlayer != null && !setToStop) {
-                            byte[] data = buffers.get(readBufferIndex);
-                            mPlayer.write(data, 0, data.length);
-                            readBufferIndex++;
-                        }
-                    } else if (setToStop) {
-                        release();
-                        return;
-                    } else {
-                        ///没有数据的时候就播放一个1ms的静音数据
-                        ///华为手机上需要录音和播放都开启才能通过SCO录音播放
-                        ///但是播这个会导致耳机声音卡顿
-                        if (mPlayer != null && !setToStop) {
-                            int length = 80 / 5;
-                            //  mPlayer.write(new byte[length], 0, length);
-                        }
+            while (!setToStop && !Thread.interrupted()) {
+                if (buffers.size() > readBufferIndex) {
+                    if (mPlayer != null && !setToStop) {
+                        byte[] data = buffers.get(readBufferIndex);
+                        mPlayer.write(data, 0, data.length);
+                        readBufferIndex++;
+                    }
+                } else {
+                    ///没有数据的时候就播放一个1ms的静音数据
+                    ///华为手机上需要录音和播放都开启才能通过SCO录音播放
+                    ///但是播这个会导致耳机声音卡顿
+                    if (mPlayer != null && !setToStop) {
+                        int length = 80 / 5;
+                        //  mPlayer.write(new byte[length], 0, length);
                     }
                 }
             }
+            readBufferIndex = 0;
+            buffers.clear();
         });
         mAudioPlayingRunner.start();
     }
