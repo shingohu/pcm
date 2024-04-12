@@ -141,7 +141,6 @@ class _AudioManager {
           return;
         }
         _bluetoothScoStateNotifier.value = _bluetoothScoState;
-        // print("音频SCO状态变更->${_bluetoothScoState.name}");
       }
 
       if ("onCurrentAudioDeviceChanged" == method) {
@@ -229,7 +228,6 @@ class _AudioManager {
     if (device.type != currentAudioDevice.type ||
         device.name != currentAudioDevice.name) {
       currentAudioDeviceNotifier.value = device;
-      // print("当前输出设备变更->${device.type}");
     }
   }
 
@@ -252,7 +250,6 @@ class _AudioManager {
         return;
       }
       externalAudioDevicesNotifier.value = devices;
-      //  print("外置输出设备变更->${devicesToString}");
     }
   }
 
@@ -269,21 +266,19 @@ class _AudioManager {
 
   ///设置当前音频输出设备
   Future<void> setCurrentAudioDevice(AudioDeviceType type) async {
-    if (type != currentAudioDevice.type) {
-      if (type == AudioDeviceType.WIREDHEADSET && isWiredHeadsetOn) {
-        _notifyCurrentAudioDeviceChanged(WiredHeadset);
-      } else if (type == AudioDeviceType.SPEAKER) {
-        _notifyCurrentAudioDeviceChanged(Speaker);
-      } else if (type == AudioDeviceType.EARPIECE) {
-        _notifyCurrentAudioDeviceChanged(Earpiece);
-      } else if (type == AudioDeviceType.BLUETOOTHHEADSET &&
-          isBluetoothHeadsetOn) {
-        _notifyCurrentAudioDeviceChanged(AudioDevice(
-            name: bluetoothHeadsetName ?? "",
-            type: AudioDeviceType.BLUETOOTHHEADSET));
-      }
-      await _channel.invokeMethod("setCurrentAudioDevice", type.index);
+    if (type == AudioDeviceType.WIREDHEADSET && isWiredHeadsetOn) {
+      _notifyCurrentAudioDeviceChanged(WiredHeadset);
+    } else if (type == AudioDeviceType.SPEAKER) {
+      _notifyCurrentAudioDeviceChanged(Speaker);
+    } else if (type == AudioDeviceType.EARPIECE) {
+      _notifyCurrentAudioDeviceChanged(Earpiece);
+    } else if (type == AudioDeviceType.BLUETOOTHHEADSET &&
+        isBluetoothHeadsetOn) {
+      _notifyCurrentAudioDeviceChanged(AudioDevice(
+          name: bluetoothHeadsetName ?? "",
+          type: AudioDeviceType.BLUETOOTHHEADSET));
     }
+    await _channel.invokeMethod("setCurrentAudioDevice", type.index);
   }
 
   ///开始语音通话
