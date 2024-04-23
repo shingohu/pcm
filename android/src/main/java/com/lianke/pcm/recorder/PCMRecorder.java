@@ -127,7 +127,7 @@ public class PCMRecorder {
                 ///设置优先级
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
                 byte[] pcmBuffer = new byte[PRE_READ_LENGTH];
-                while (isRecording) {
+                while (isRecording && !Thread.interrupted()) {
                     int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
                     if (readSize > 0) {
                         if (readSize >= PRE_READ_LENGTH) {
@@ -149,7 +149,6 @@ public class PCMRecorder {
 
     public synchronized void stop() {
         if (mAudioRecord != null && isRecording) {
-            mAudioRecord.stop();
             if (mAudioHandleRunner != null) {
                 mAudioHandleRunner.interrupt();
                 mAudioHandleRunner = null;
@@ -161,6 +160,7 @@ public class PCMRecorder {
 
     private synchronized void resetWhenStop() {
         if (mAudioRecord != null) {
+            mAudioRecord.stop();
             mAudioRecord.release();
             mAudioRecord = null;
             Log.e(TAG, "结束录音");
