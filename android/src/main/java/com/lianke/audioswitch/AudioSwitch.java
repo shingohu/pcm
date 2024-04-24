@@ -206,14 +206,14 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             } else {
                 audioManager.setSpeakerphoneOn(true);
             }
-            Log.e("AudioManager", "打开扬声器");
+            //  Log.e("AudioManager", "打开扬声器");
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 audioManager.clearCommunicationDevice();
             } else {
                 audioManager.setSpeakerphoneOn(false);
             }
-            Log.e("AudioManager", "关闭扬声器");
+            // Log.e("AudioManager", "关闭扬声器");
         }
     }
 

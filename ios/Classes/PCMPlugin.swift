@@ -88,17 +88,22 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         
         
         if(method == "initRecorder"){
-            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-            let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-            PCMRecorderClient.shared.setUp(preFrameSize: preFrameSize)
             result(true)
         }
         else if(method == "startRecording"){
-            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-            let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-            PCMRecorderClient.shared.setUp(preFrameSize: preFrameSize)
-            PCMRecorderClient.shared.start(samplateRate: Double(sampleRateInHz))
-            result(true)
+            
+            haseRecordPermission { allow in
+                if(allow){
+                    let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+                    let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+                    PCMRecorderClient.shared.setUp(preFrameSize: preFrameSize)
+                    PCMRecorderClient.shared.start(samplateRate: Double(sampleRateInHz))
+                    result(true)
+                }else{
+                    result(false)
+                }
+            }
+          
         }else if(method == "stopRecording"){
             PCMRecorderClient.shared.stop()
             result(true)
@@ -225,6 +230,21 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             let session = AVAudioSession.sharedInstance();
             session.requestRecordPermission { allow in
                 result(allow)
+            }
+        }
+        
+    }
+    
+    
+    func haseRecordPermission(_ response: @escaping (Bool) -> Void){
+        if #available(iOS 17.0, *) {
+            AVAudioApplication.requestRecordPermission { allow in
+                response(allow)
+            }
+        } else {
+            let session = AVAudioSession.sharedInstance();
+            session.requestRecordPermission { allow in
+                response(allow)
             }
         }
         
