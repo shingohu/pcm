@@ -25,13 +25,12 @@ class _InnerPCMPlayer {
    * [sampleRateInHz]采样率
    * [voiceCall]是否语音呼叫(android有效)
    */
-  Future<void> start(
-    Uint8List data, {
+  Future<void> start(Uint8List data, {
     int sampleRateInHz = 8000,
     bool voiceCall = true,
   }) async {
     isPlayingNow = true;
-    await _channel.invokeMethod("startPlaying", {
+    _channel.invokeMethod("startPlaying", {
       "data": data,
       "sampleRateInHz": sampleRateInHz,
       "voiceChat": voiceCall,

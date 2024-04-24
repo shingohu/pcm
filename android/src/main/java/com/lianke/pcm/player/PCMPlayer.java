@@ -16,6 +16,7 @@ import com.lianke.pcm.adpcm.Adpcm;
 import com.lianke.pcm.recorder.PCMRecorder;
 
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -49,7 +50,7 @@ public class PCMPlayer {
 
 
     ///音频数据缓冲区
-    private final List<byte[]> buffers = new LinkedList<>();
+    private final List<byte[]> buffers = new ArrayList<>();
 
     ///读取缓冲区的下标
     private int readBufferIndex = 0;
