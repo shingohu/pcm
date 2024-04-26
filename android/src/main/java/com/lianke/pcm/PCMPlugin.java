@@ -10,9 +10,11 @@ import android.content.pm.PackageManager;
 
 import android.os.Handler;
 import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.PermissionChecker;
+
 import com.lianke.audioswitch.AudioSwitch;
 import com.lianke.pcm.player.PCMPlayer;
 import com.lianke.pcm.recorder.PCMRecorder;
@@ -130,7 +132,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("isPlaying".equals(method)) {
             result.success(PCMPlayer.shared().isPlaying());
         } else if ("stopPlaying".equals(method)) {
-            PCMPlayer.shared().stopNow();
+            PCMPlayer.shared().stop();
             result.success(true);
         }
 

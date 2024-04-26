@@ -49,8 +49,8 @@ public class PCMPlayer {
     private volatile AudioTrack mPlayer;
 
 
-    ///音频数据缓冲区
-    private final List<byte[]> buffers = new ArrayList<>();
+    ///音频数据缓冲区,这里不能用ArrayList
+    private final List<byte[]> buffers = new LinkedList<>();
 
     ///读取缓冲区的下标
     private int readBufferIndex = 0;
@@ -139,12 +139,11 @@ public class PCMPlayer {
     ///重置播放参数
     private synchronized void release() {
         if (mPlayer != null) {
-            stopPlayingRunner();
-            setToStop = true;
-            mPlayer.pause();
-            mPlayer.flush();
+            mPlayer.stop();
             mPlayer.release();
             mPlayer = null;
+            readBufferIndex = 0;
+            buffers.clear();
             Log.e(TAG, "结束播放");
         }
     }
@@ -153,8 +152,8 @@ public class PCMPlayer {
         if (mAudioPlayingRunner != null) {
             if (!mAudioPlayingRunner.isInterrupted()) {
                 mAudioPlayingRunner.interrupt();
-                mAudioPlayingRunner = null;
             }
+            mAudioPlayingRunner = null;
         }
     }
 
@@ -167,12 +166,13 @@ public class PCMPlayer {
         Log.e(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
-            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
             while (!setToStop && !Thread.interrupted()) {
                 if (buffers.size() > readBufferIndex) {
                     if (mPlayer != null && !setToStop) {
                         byte[] data = buffers.get(readBufferIndex);
-                        mPlayer.write(data, 0, data.length);
+                        int length = data.length;
+                        mPlayer.write(data, 0, length);
                         readBufferIndex++;
                     }
                 } else {
@@ -185,26 +185,23 @@ public class PCMPlayer {
                     }
                 }
             }
-            readBufferIndex = 0;
-            buffers.clear();
+            release();
         });
         mAudioPlayingRunner.start();
     }
 
 
-    ///停止播放,不会立刻停止,会等待全部播放完成
-    public synchronized void stop() {
-        setToStop = true;
-    }
-
-
     ///立刻停止播放
-    public synchronized void stopNow() {
-        try {
-            release();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public synchronized void stop() {
+        if (mPlayer != null) {
+            if (!setToStop) {
+                setToStop = true;
+                stopPlayingRunner();
+            } else {
+                release();
+            }
         }
+
     }
 
 }

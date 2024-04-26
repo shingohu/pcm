@@ -236,16 +236,14 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         }
                     }
                     if (scoDevice != null) {
-                        setScoState(BluetoothScoState.CONNECTING);
                         audioManager.setCommunicationDevice(scoDevice);
                     }
                 } else {
-                    setScoState(BluetoothScoState.CONNECTING);
                     audioManager.startBluetoothSco();
                 }
             } else {
-                audioManager.setBluetoothScoOn(true);
                 setScoState(BluetoothScoState.CONNECTED);
+                audioManager.setBluetoothScoOn(true);
             }
         } else {
             setScoState(BluetoothScoState.DISCONNECTED);
@@ -297,9 +295,13 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
                             if (scoState == BluetoothScoState.CONNECTED) {
                                 audioManager.setBluetoothScoOn(false);
-                                Log.e("AudioManager", "SCO已断开");
                                 setScoState(BluetoothScoState.DISCONNECTED);
                                 unRegisterSco();
+                                Log.e("AudioManager", "SCO已断开");
+                            } else if (scoState == BluetoothScoState.CONNECTING) {
+                                setScoState(BluetoothScoState.ERROR);
+                                unRegisterSco();
+                                Log.e("AudioManager", "SCO开启失败");
                             }
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_ERROR) {
                             audioManager.setBluetoothScoOn(false);
@@ -308,6 +310,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                             Log.e("AudioManager", "SCO开启失败");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_CONNECTING) {
                             Log.e("AudioManager", "SCO开启中");
+                            setScoState(BluetoothScoState.CONNECTING);
                         }
 
                     }

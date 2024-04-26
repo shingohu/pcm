@@ -137,7 +137,7 @@ public class PCMRecorder {
                         }
                     }
                 }
-                resetWhenStop();
+                release();
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
@@ -147,18 +147,26 @@ public class PCMRecorder {
     }
 
 
+    private void stopRecordingRunner() {
+        if (mAudioHandleRunner != null && !mAudioHandleRunner.isInterrupted()) {
+            mAudioHandleRunner.interrupt();
+        }
+        mAudioHandleRunner = null;
+    }
+
     public synchronized void stop() {
-        if (mAudioRecord != null && isRecording) {
-            if (mAudioHandleRunner != null) {
-                mAudioHandleRunner.interrupt();
-                mAudioHandleRunner = null;
+        if (mAudioRecord != null) {
+            if (isRecording) {
+                stopRecordingRunner();
+                isRecording = false;
+            } else {
+                release();
             }
-            isRecording = false;
         }
     }
 
 
-    private synchronized void resetWhenStop() {
+    private synchronized void release() {
         if (mAudioRecord != null) {
             mAudioRecord.stop();
             mAudioRecord.release();

@@ -58,7 +58,7 @@ AudioDeviceType _getAudioDeviceTypeByString(String type) {
 ///音频管理
 class _AudioManager {
   ///android sco 状态(暂时没用)
-  ValueNotifier<BluetoothScoState> _bluetoothScoStateNotifier =
+  ValueNotifier<BluetoothScoState> bluetoothScoStateNotifier =
       ValueNotifier(BluetoothScoState.DISCONNECTED);
 
   ///外置音频输出设备变更
@@ -119,7 +119,7 @@ class _AudioManager {
   }
 
   void _init() async {
-    _bluetoothScoStateNotifier.value = await _isBluetoothScoOn
+    bluetoothScoStateNotifier.value = await _isBluetoothScoOn
         ? BluetoothScoState.CONNECTED
         : BluetoothScoState.DISCONNECTED;
     await _getCurrentAudioDevice();
@@ -140,7 +140,7 @@ class _AudioManager {
         } else {
           return;
         }
-        _bluetoothScoStateNotifier.value = _bluetoothScoState;
+        bluetoothScoStateNotifier.value = _bluetoothScoState;
       }
 
       if ("onCurrentAudioDeviceChanged" == method) {
