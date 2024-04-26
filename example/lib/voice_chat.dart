@@ -1,16 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_to_airplay/flutter_to_airplay.dart';
 import 'package:oktoast/oktoast.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pcm/pcm.dart';
-import 'package:synchronized/synchronized.dart';
 
 class CallPage extends StatefulWidget {
   const CallPage({super.key});
@@ -35,6 +30,7 @@ class _CallPageState extends State<CallPage> {
         .addListener(onAudioDevicesChanged);
     AudioManager.currentAudioDeviceNotifier
         .addListener(onCurrentAudioDeviceChanged);
+    AudioManager.bluetoothScoStateNotifier.addListener(_onScoStateChanged);
   }
 
   @override
@@ -43,6 +39,7 @@ class _CallPageState extends State<CallPage> {
         .removeListener(onAudioDevicesChanged);
     AudioManager.currentAudioDeviceNotifier
         .removeListener(onCurrentAudioDeviceChanged);
+    AudioManager.bluetoothScoStateNotifier.removeListener(_onScoStateChanged);
     super.dispose();
   }
 
@@ -71,6 +68,22 @@ class _CallPageState extends State<CallPage> {
       isChangeAudioDevice = false;
     });
     setState(() {});
+  }
+
+  ///sco状态变更
+  void _onScoStateChanged() {
+    if (AudioManager.bluetoothScoStateNotifier.value ==
+            BluetoothScoState.DISCONNECTED ||
+        AudioManager.bluetoothScoStateNotifier.value ==
+            BluetoothScoState.ERROR) {
+      if (AudioManager.isWiredHeadsetOn) {
+        AudioManager.setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
+      } else if (lastSpeakerOn) {
+        AudioManager.setCurrentAudioDevice(AudioDeviceType.SPEAKER);
+      } else {
+        AudioManager.setCurrentAudioDevice(AudioDeviceType.EARPIECE);
+      }
+    }
   }
 
   @override
@@ -169,8 +182,15 @@ class _CallPageState extends State<CallPage> {
         color: Colors.black,
         size: 25,
       );
-    } else if (currentAudioDevice.type == AudioDeviceType.BLUETOOTHHEADSET) {
-      name = currentAudioDevice.name;
+    } else if (currentAudioDevice.type == AudioDeviceType.BLUETOOTHHEADSET ||
+        AudioManager.bluetoothScoStateNotifier.value ==
+            BluetoothScoState.CONNECTING) {
+      if (AudioManager.bluetoothScoStateNotifier.value ==
+          BluetoothScoState.CONNECTING) {
+        name = AudioManager.bluetoothHeadsetName ?? "蓝牙";
+      } else {
+        name = currentAudioDevice.name;
+      }
       icon = Icon(
         CupertinoIcons.bluetooth,
         color: Colors.black,
@@ -384,7 +404,7 @@ class _CallPageState extends State<CallPage> {
             if (audio != null) {
               if (endTime == null) {
                 endTime = DateTime.now().millisecondsSinceEpoch;
-               // print("第一帧数据=>${endTime! - startTime}");
+                // print("第一帧数据=>${endTime! - startTime}");
               }
               if (!isMute && !isChangeAudioDevice) {
                 PCMPlayer.start(audio);

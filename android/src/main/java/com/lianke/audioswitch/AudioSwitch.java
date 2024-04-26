@@ -344,10 +344,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     private void setScoState(BluetoothScoState state) {
         if (this.scoState != state) {
             this.scoState = state;
-            notifyCurrentAudioDeviceChanged();
             notifyBluetoothScoStateChange();
+            notifyCurrentAudioDeviceChanged();
         }
-
     }
 
 
