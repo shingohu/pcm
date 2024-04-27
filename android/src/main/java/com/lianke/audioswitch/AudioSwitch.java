@@ -1,5 +1,6 @@
 package com.lianke.audioswitch;
 
+import static android.media.AudioManager.GET_DEVICES_INPUTS;
 import static android.media.AudioManager.GET_DEVICES_OUTPUTS;
 
 import android.app.Activity;
@@ -17,15 +18,12 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -103,7 +101,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     public boolean isBluetoothHeadsetOn() {
         AudioDeviceInfo[] devices = audioManager.getDevices(
-                GET_DEVICES_OUTPUTS);
+                GET_DEVICES_INPUTS);
+
         ///倒序
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
@@ -130,7 +129,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     public String getBluetoothHeadsetName() {
         AudioDeviceInfo[] devices = audioManager.getDevices(
-                GET_DEVICES_OUTPUTS);
+                GET_DEVICES_INPUTS);
         ///倒序 取最新的那个
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
