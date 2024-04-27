@@ -7,16 +7,9 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
-import android.media.PlaybackParams;
 import android.os.Build;
 import android.os.Process;
 import android.util.Log;
-
-import com.lianke.pcm.adpcm.Adpcm;
-import com.lianke.pcm.recorder.PCMRecorder;
-
-
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -139,7 +132,6 @@ public class PCMPlayer {
     ///重置播放参数
     private synchronized void release() {
         if (mPlayer != null) {
-            mPlayer.stop();
             mPlayer.release();
             mPlayer = null;
             readBufferIndex = 0;
@@ -169,19 +161,11 @@ public class PCMPlayer {
             Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
             while (!setToStop && !Thread.interrupted()) {
                 if (buffers.size() > readBufferIndex) {
-                    if (mPlayer != null && !setToStop) {
+                    if (mPlayer != null) {
                         byte[] data = buffers.get(readBufferIndex);
                         int length = data.length;
                         mPlayer.write(data, 0, length);
                         readBufferIndex++;
-                    }
-                } else {
-                    ///没有数据的时候就播放一个1ms的静音数据
-                    ///华为手机上需要录音和播放都开启才能通过SCO录音播放
-                    ///但是播这个会导致耳机声音卡顿
-                    if (mPlayer != null && !setToStop) {
-                        int length = 80 / 5;
-                        //  mPlayer.write(new byte[length], 0, length);
                     }
                 }
             }
@@ -197,11 +181,11 @@ public class PCMPlayer {
             if (!setToStop) {
                 setToStop = true;
                 stopPlayingRunner();
+                mPlayer.stop();
             } else {
                 release();
             }
         }
-
     }
 
 }

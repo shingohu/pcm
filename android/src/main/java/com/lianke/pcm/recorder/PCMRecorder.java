@@ -13,7 +13,6 @@ import android.os.Build;
 import android.util.Log;
 import android.os.Process;
 
-import com.lianke.pcm.adpcm.Adpcm;
 
 /**
  * 音频录制
@@ -157,6 +156,7 @@ public class PCMRecorder {
     public synchronized void stop() {
         if (mAudioRecord != null) {
             if (isRecording) {
+                mAudioRecord.stop();
                 stopRecordingRunner();
                 isRecording = false;
             } else {
@@ -168,7 +168,6 @@ public class PCMRecorder {
 
     private synchronized void release() {
         if (mAudioRecord != null) {
-            mAudioRecord.stop();
             mAudioRecord.release();
             mAudioRecord = null;
             Log.e(TAG, "结束录音");
@@ -223,6 +222,4 @@ public class PCMRecorder {
             }
         }
     }
-
-
 }
