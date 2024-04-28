@@ -19,11 +19,13 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -76,11 +78,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         if (isBluetoothHeadsetOn()) {
             availableAudioDevices.add(new AudioDevice(getBluetoothHeadsetName(), AudioDeviceType.BLUETOOTHHEADSET));
         }
-
         if (isWiredHeadsetOn()) {
             availableAudioDevices.add(new AudioDevice(AudioDeviceType.WIREDHEADSET.name(), AudioDeviceType.WIREDHEADSET));
         }
-
         notifyCurrentAudioDeviceChanged();
         notifyAvailableAudioDevicesChanged();
     }
@@ -112,7 +112,6 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         }
         return false;
     }
-
 
     //是否连接蓝牙音响
     public boolean isBluetoothA2dpOn() {
@@ -193,27 +192,28 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     public void openSpeaker(boolean open) {
-        if (open) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
-                for (AudioDeviceInfo device : devices) {
-                    if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                        audioManager.setCommunicationDevice(device);
-                        break;
-                    }
-                }
-            } else {
-                audioManager.setSpeakerphoneOn(true);
-            }
-            //  Log.e("AudioManager", "打开扬声器");
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                audioManager.clearCommunicationDevice();
-            } else {
-                audioManager.setSpeakerphoneOn(false);
-            }
-            // Log.e("AudioManager", "关闭扬声器");
-        }
+        audioManager.setSpeakerphoneOn(open);
+//        if (open) {
+//            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+//                for (AudioDeviceInfo device : devices) {
+//                    if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+//                        audioManager.setCommunicationDevice(device);
+//                        break;
+//                    }
+//                }
+//            } else {
+//                audioManager.setSpeakerphoneOn(true);
+//            }
+//            //  Log.e("AudioManager", "打开扬声器");
+//        } else {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                audioManager.clearCommunicationDevice();
+//            } else {
+//                audioManager.setSpeakerphoneOn(false);
+//            }
+//            // Log.e("AudioManager", "关闭扬声器");
+//        }
     }
 
 
@@ -223,8 +223,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             setAudioModeInCommunication();
             registerSco();
             if (!isScoOn) {
-                ///android 11
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                ///android 13
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
                     AudioDeviceInfo scoDevice = null;
                     for (int i = 0; i < devices.size(); i++) {
@@ -239,6 +239,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                     }
                 } else {
                     audioManager.startBluetoothSco();
+                    audioManager.setBluetoothScoOn(true);
                 }
             } else {
                 setScoState(BluetoothScoState.CONNECTED);
@@ -252,9 +253,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     private void stopBluetoothSco() {
         if (this.scoState == BluetoothScoState.CONNECTED || this.scoState == BluetoothScoState.CONNECTING) {
             audioManager.setBluetoothScoOn(false);
-            ///android11
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                audioManager.stopBluetoothSco();
+            ///android13
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                audioManager.clearCommunicationDevice();
             } else {
                 audioManager.stopBluetoothSco();
             }
@@ -266,7 +267,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     private boolean isBluetoothScoOn() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (audioManager.getCommunicationDevice() != null) {
                 return audioManager.getCommunicationDevice().getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO;
             }
@@ -389,7 +390,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     public boolean isSpeakerOn() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (audioManager.getCommunicationDevice() != null) {
                 return audioManager.getCommunicationDevice().getType() ==
                         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER;
