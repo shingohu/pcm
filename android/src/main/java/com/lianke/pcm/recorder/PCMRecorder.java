@@ -127,11 +127,13 @@ public class PCMRecorder {
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
                 byte[] pcmBuffer = new byte[PRE_READ_LENGTH];
                 while (isRecording && !Thread.interrupted()) {
-                    int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
-                    if (readSize > 0) {
-                        if (readSize >= PRE_READ_LENGTH) {
-                            if (recordListener != null) {
-                                recordListener.onAudioProcess(pcmBuffer);
+                    if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+                        int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
+                        if (readSize > 0) {
+                            if (readSize >= PRE_READ_LENGTH) {
+                                if (recordListener != null) {
+                                    recordListener.onAudioProcess(pcmBuffer);
+                                }
                             }
                         }
                     }

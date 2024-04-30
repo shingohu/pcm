@@ -38,6 +38,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_plugin_android_lifecycle:
+    dependency: transitive
+    description:
+      name: flutter_plugin_android_lifecycle
+      sha256: "592dc01a18961a51c24ae5d963b724b2b7fa4a95c100fe8eb6ca8a5a4732cadf"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.0.18"
   flutter_to_airplay:
     dependency: "direct main"
     description:
@@ -46,6 +54,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.0.4"
+  flutter_volume_controller:
+    dependency: "direct main"
+    description:
+      name: flutter_volume_controller
+      sha256: fa4c36dfe7ef7f423704f34ab8e64e00b4a30a90aa6e56f251e9dba649efcd7f
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.3.2"
   material_color_utilities:
     dependency: transitive
     description:
@@ -188,4 +204,4 @@ packages:
     version: "1.0.4"
 sdks:
   dart: ">=3.3.0 <4.0.0"
-  flutter: ">=3.10.0"
+  flutter: ">=3.13.0"

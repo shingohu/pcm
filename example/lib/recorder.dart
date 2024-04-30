@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
 
@@ -43,6 +44,12 @@ class _RecorderPageState extends State<RecorderPage> {
                   endPlay();
                 },
                 child: Text("结束播放")),
+            TextButton(
+                onPressed: () {
+                  FlutterVolumeController.setVolume(1,
+                      stream: AudioStream.voiceCall);
+                },
+                child: Text("调整音量")),
           ],
         ),
       ),
