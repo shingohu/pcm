@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
+
+import 'audio_mixer.dart';
 
 class RecorderPage extends StatefulWidget {
   const RecorderPage({super.key});
@@ -13,6 +16,9 @@ class RecorderPage extends StatefulWidget {
 }
 
 class _RecorderPageState extends State<RecorderPage> {
+  Map<String, List<Uint8List>> _speakerAudioBufferMap = {};
+  String userId = "1";
+
   @override
   void initState() {
     AudioManager.currentAudioDeviceNotifier.addListener(() {});
@@ -31,6 +37,7 @@ class _RecorderPageState extends State<RecorderPage> {
           children: [
             TextButton(
                 onPressed: () {
+                  userId = DateTime.now().millisecondsSinceEpoch.toString();
                   startRecord();
                 },
                 child: Text("开始录音")),
@@ -38,7 +45,12 @@ class _RecorderPageState extends State<RecorderPage> {
                 onPressed: () {
                   stopRecord();
                 },
-                child: Text("结束录音并播放")),
+                child: Text("结束录音")),
+            TextButton(
+                onPressed: () {
+                  startPlay();
+                },
+                child: Text("开始播放")),
             TextButton(
                 onPressed: () {
                   endPlay();
@@ -67,8 +79,13 @@ class _RecorderPageState extends State<RecorderPage> {
           onData: (audio) {
             if (audio != null) {
               ///部分手机蓝牙录音的时候需要开启播放才可以收音
-              PCMPlayer.start(Uint8List(640));
-              audioList.add(audio);
+              // PCMPlayer.start(Uint8List(640));
+              // audioList.add(audio);
+
+              if (!_speakerAudioBufferMap.containsKey(userId)) {
+                _speakerAudioBufferMap[userId] = [];
+              }
+              _speakerAudioBufferMap[userId]!.add(audio);
             }
           });
       setState(() {});
@@ -79,19 +96,51 @@ class _RecorderPageState extends State<RecorderPage> {
 
   Future<void> stopRecord() async {
     await PCMRecorder.stop();
-    startPlay();
   }
 
   Future<void> endPlay() async {
+    _playingSpeakTimer?.cancel();
+    _playingSpeakTimer = null;
+    _speakerAudioBufferMap.clear();
     await PCMPlayer.stop();
     AudioManager.endVoiceChatMode();
     audioList.clear();
+
     setState(() {});
   }
 
   Future<void> startPlay() async {
-    PCMPlayer.start(
-        Uint8List.fromList(audioList.expand((element) => element).toList()));
-    audioList.clear();
+    _startPlayingSpeak();
+
+    // PCMPlayer.start(
+    //     Uint8List.fromList(audioList.expand((element) => element).toList()));
+    // audioList.clear();
+  }
+
+  Uint8List? _mixAudioData() {
+    List<Uint8List> audioList = [];
+    for (int i = 0; i < _speakerAudioBufferMap.values.length; i++) {
+      List<Uint8List> temp = _speakerAudioBufferMap.values.elementAt(i);
+      if (temp.length > 0) {
+        audioList.add(temp.first);
+        temp.removeAt(0);
+      }
+    }
+    return AudioMixer.mix(audioList);
+  }
+
+  Timer? _playingSpeakTimer;
+
+  ///开始播放语音
+  void _startPlayingSpeak() {
+    if (_playingSpeakTimer == null) {
+      ///每隔30S取一次数据
+      _playingSpeakTimer = Timer.periodic(Duration(milliseconds: 10), (timer) {
+        Uint8List? audio = _mixAudioData();
+        if (audio != null) {
+          PCMPlayer.start(audio);
+        }
+      });
+    }
   }
 }
