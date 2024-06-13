@@ -131,8 +131,13 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }
         
         else if(method == "abandonAudioFocus"){
-            abandonAudioFocus()
-            result(true)
+            DispatchQueue.global(qos: .userInitiated).async {
+                self.abandonAudioFocus()
+                // 回到主线程更新UI
+                DispatchQueue.main.async{
+                    result(true)
+                }
+            }
         } else if(method == "requestAudioFocus"){
             requestAudioFocus()
             result(true)
@@ -355,8 +360,8 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(PCMPlayerClient.shared.isPlaying || PCMRecorderClient.shared.isRecording){
                 return ;
             }
-            try AVAudioSession.sharedInstance().setActive(false,options: .notifyOthersOnDeactivation)
             try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(false,options: .notifyOthersOnDeactivation)
             print("释放音频焦点")
         }catch {
             print("释放音频焦点报错")
