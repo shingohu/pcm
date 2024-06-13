@@ -134,6 +134,8 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("stopPlaying".equals(method)) {
             PCMPlayer.shared().stop();
             result.success(true);
+        } else if ("unPlayLength".equals(method)) {
+            result.success(PCMPlayer.shared().unPlayLength());
         }
 
 

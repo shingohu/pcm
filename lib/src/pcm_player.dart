@@ -1,5 +1,5 @@
 import 'package:flutter/services.dart';
-
+import 'dart:io';
 final _InnerPCMPlayer PCMPlayer = _InnerPCMPlayer._();
 
 class _InnerPCMPlayer {
@@ -29,6 +29,9 @@ class _InnerPCMPlayer {
     int sampleRateInHz = 8000,
     bool voiceCall = true,
   }) async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return;
+    }
     isPlayingNow = true;
     _channel.invokeMethod("startPlaying", {
       "data": data,
@@ -39,12 +42,26 @@ class _InnerPCMPlayer {
 
   ///是否正在播放
   Future<bool> get isPlaying async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return false;
+    }
     return await _channel.invokeMethod("isPlaying");
   }
 
   ///结束播放
   Future<void> stop() async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return;
+    }
     await _channel.invokeMethod("stopPlaying");
     isPlayingNow = false;
+  }
+
+  ///待播放长度
+  Future<int> unPlayLength() async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return 0;
+    }
+    return await _channel.invokeMethod("unPlayLength");
   }
 }

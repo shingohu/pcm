@@ -138,10 +138,11 @@ public class PCMRecorder {
                         }
                     }
                 }
-                release();
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
+                release();
+
             }
         };
         mAudioHandleRunner.start();

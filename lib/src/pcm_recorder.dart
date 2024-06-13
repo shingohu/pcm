@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'dart:io';
 import 'package:flutter/services.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
@@ -43,11 +43,13 @@ class _InnerPCMRecorder {
    * [audioSource]音源选择(android有用)
    * [onData] 音频数据回调
    */
-  Future<bool> start(
-      {int sampleRateInHz = 8000,
-      int preFrameSize = 320,
-      AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
-      Function(Uint8List?)? onData}) async {
+  Future<bool> start({int sampleRateInHz = 8000,
+    int preFrameSize = 320,
+    AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
+    Function(Uint8List?)? onData}) async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return false;
+    }
     this._onAudioCallback = onData;
     this.isRecordingNow = true;
     bool success = await _channel.invokeMethod("startRecording", {
@@ -86,11 +88,17 @@ class _InnerPCMRecorder {
   }
 
   Future<bool> get isRecording async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return false;
+    }
     bool success = await _channel.invokeMethod("isRecording");
     return success;
   }
 
   Future<void> stop() async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return;
+    }
     await _channel.invokeMethod("stopRecording");
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
@@ -99,10 +107,16 @@ class _InnerPCMRecorder {
   }
 
   Future<bool> requestRecordPermission() async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return true;
+    }
     return await _channel.invokeMethod("requestRecordPermission");
   }
 
   Future<bool> checkRecordPermission() async {
+    if (!Platform.isIOS && Platform.isAndroid) {
+      return true;
+    }
     return await _channel.invokeMethod("checkRecordPermission");
   }
 }

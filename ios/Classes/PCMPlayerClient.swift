@@ -43,8 +43,8 @@ class PCMPlayerClient {
         if(isPlaying){
             isPlaying = false
             PCMPlayer.shared().stop()
-            audioBuffer.removeAll()
             readPCMDataIndex = 0
+            audioBuffer.removeAll()
         }
     }
     
@@ -63,6 +63,11 @@ class PCMPlayerClient {
         set {
             _isPlaying = newValue
         }
+    }
+    
+    public func unPlayLength()->Int{
+        let count = audioBuffer.count
+        return count - readPCMDataIndex;
     }
     
 

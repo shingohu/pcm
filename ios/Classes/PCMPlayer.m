@@ -43,23 +43,23 @@
         
        // NSInteger start = [self getNowDateFormatInteger];
       //  NSLog(@"开始播放%ld",(long)start);
-        NSError* error;
-        [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:&error];
-        if(error){
-            NSLog(@"%@",error);
-        }
-        [[AVAudioSession sharedInstance] setPreferredInputNumberOfChannels:1 error:&error];
-        if(error){
-            NSLog(@"%@",error);
-        }
-        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:&error];
-        if(error){
-            NSLog(@"%@",error);
-        }
-        [[AVAudioSession sharedInstance] setActive:YES error:&error];
-        if(error){
-            NSLog(@"%@",error);
-        }
+//       NSError* error;
+//        [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:&error];
+//        if(error){
+//            NSLog(@"%@",error);
+//        }
+//        [[AVAudioSession sharedInstance] setPreferredInputNumberOfChannels:1 error:&error];
+//        if(error){
+//            NSLog(@"%@",error);
+//        }
+//        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:&error];
+//        if(error){
+//            NSLog(@"%@",error);
+//        }
+//        [[AVAudioSession sharedInstance] setActive:YES error:&error];
+//        if(error){
+//            NSLog(@"%@",error);
+//        }
 
         [self setupRemoteIOUnit];
     

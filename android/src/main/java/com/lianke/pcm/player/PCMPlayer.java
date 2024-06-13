@@ -188,4 +188,24 @@ public class PCMPlayer {
         }
     }
 
+    public synchronized int unPlayLength() {
+        try {
+            int size = buffers.size();
+            int index = readBufferIndex;
+            int i = size - index;
+            if (i > 0) {
+                int count = 0;
+                List<byte[]> datas = buffers.subList(index, size);
+                for (int k = 0; k < datas.size(); k++) {
+                    count += datas.get(k).length;
+                }
+                return count;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+
+    }
+
 }
