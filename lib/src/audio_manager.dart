@@ -313,7 +313,7 @@ class _AudioManager {
       } else {
         setCurrentAudioDevice(AudioDeviceType.EARPIECE);
       }
-    } else {
+    } else if (Platform.isIOS) {
       await setPlayAndRecordSession(defaultToSpeaker: defaultToSpeaker);
       if (isWiredHeadsetOn) {
         setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);

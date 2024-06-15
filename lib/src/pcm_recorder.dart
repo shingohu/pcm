@@ -47,7 +47,7 @@ class _InnerPCMRecorder {
     int preFrameSize = 320,
     AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
     Function(Uint8List?)? onData}) async {
-    if (!Platform.isIOS && Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid) {
       return false;
     }
     this._onAudioCallback = onData;
@@ -88,7 +88,7 @@ class _InnerPCMRecorder {
   }
 
   Future<bool> get isRecording async {
-    if (!Platform.isIOS && Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid) {
       return false;
     }
     bool success = await _channel.invokeMethod("isRecording");
@@ -96,7 +96,7 @@ class _InnerPCMRecorder {
   }
 
   Future<void> stop() async {
-    if (!Platform.isIOS && Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
     await _channel.invokeMethod("stopRecording");
@@ -107,15 +107,15 @@ class _InnerPCMRecorder {
   }
 
   Future<bool> requestRecordPermission() async {
-    if (!Platform.isIOS && Platform.isAndroid) {
-      return true;
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return false;
     }
     return await _channel.invokeMethod("requestRecordPermission");
   }
 
   Future<bool> checkRecordPermission() async {
-    if (!Platform.isIOS && Platform.isAndroid) {
-      return true;
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return false;
     }
     return await _channel.invokeMethod("checkRecordPermission");
   }
