@@ -114,11 +114,24 @@ public class PCMPlayer {
     }
 
 
+    public AudioDeviceInfo getPreferredDevice() {
+        if (mPlayer != null) {
+            return mPlayer.getPreferredDevice();
+        }
+        return null;
+    }
+
     public AudioDeviceInfo getRoutedDevice() {
-        if (mPlayer != null && mPlayer.getRoutedDevice() != null) {
+        if (mPlayer != null) {
             return mPlayer.getRoutedDevice();
         }
         return null;
+    }
+
+    public void setPreferredDevice(AudioDeviceInfo device) {
+        if (mPlayer != null) {
+            mPlayer.setPreferredDevice(device);
+        }
     }
 
     public void play(byte[] pcm) {
@@ -158,13 +171,15 @@ public class PCMPlayer {
         Log.e(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
-            Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
+            Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             while (!setToStop && !Thread.interrupted()) {
                 if (buffers.size() > readBufferIndex) {
                     if (mPlayer != null) {
                         byte[] data = buffers.get(readBufferIndex);
-                        int length = data.length;
-                        mPlayer.write(data, 0, length);
+                        if (data != null) {
+                            int length = data.length;
+                            mPlayer.write(data, 0, length);
+                        }
                         readBufferIndex++;
                     }
                 }
