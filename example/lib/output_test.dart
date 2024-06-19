@@ -18,8 +18,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
   void initState() {
     AudioManager.currentAudioDeviceNotifier
         .addListener(onCurrentAudioDeviceChanged);
-    AudioManager.externalAudioDevicesNotifier
-        .addListener(onAudioDevicesChanged);
+    AudioManager.audioDevicesNotifier.addListener(onAudioDevicesChanged);
     AudioManager.bluetoothScoStateNotifier
         .addListener(onBluetoothSCOStateChanged);
     super.initState();
@@ -39,6 +38,12 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   void onAudioDevicesChanged() {
     print("音频输出设备变更");
+    print(AudioManager.audioDevices
+        .map((e) {
+          return {"name": e.name, "type": e.type.name};
+        })
+        .toList()
+        .toString());
     if (PCMPlayer.isPlayingNow) {
       setAudioDevice();
     }
@@ -55,8 +60,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
   void dispose() {
     AudioManager.currentAudioDeviceNotifier
         .removeListener(onCurrentAudioDeviceChanged);
-    AudioManager.externalAudioDevicesNotifier
-        .removeListener(onAudioDevicesChanged);
+    AudioManager.audioDevicesNotifier.removeListener(onAudioDevicesChanged);
     AudioManager.bluetoothScoStateNotifier
         .removeListener(onBluetoothSCOStateChanged);
     super.dispose();
@@ -167,7 +171,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
     } else if (AudioManager.isBluetoothA2dpOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHA2DP);
     } else {
-      AudioManager.setCurrentAudioDevice(AudioDeviceType.EARPIECE);
+      AudioManager.setCurrentAudioDevice(AudioDeviceType.SPEAKER);
     }
   }
 

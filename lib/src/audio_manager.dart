@@ -65,12 +65,10 @@ class _AudioManager {
   BluetoothScoState get bluetoothScoState => bluetoothScoStateNotifier.value;
 
   ///外置音频输出设备变更
-  ValueNotifier<List<AudioDevice>> externalAudioDevicesNotifier =
-      ValueNotifier([]);
+  ValueNotifier<List<AudioDevice>> audioDevicesNotifier = ValueNotifier([]);
 
   ///外置音频输出设备(不包含内置耳机和内置扬声器)
-  List<AudioDevice> get _externalAudioDevices =>
-      externalAudioDevicesNotifier.value;
+  List<AudioDevice> get audioDevices => audioDevicesNotifier.value;
 
   ///当前音频设备变更通知
   ValueNotifier<AudioDevice> currentAudioDeviceNotifier = ValueNotifier(
@@ -82,8 +80,8 @@ class _AudioManager {
 
   ///是否连接有无线耳机
   bool get isWiredHeadsetOn {
-    for (int i = 0; i < _externalAudioDevices.length; i++) {
-      if (_externalAudioDevices[i].type == AudioDeviceType.WIREDHEADSET) {
+    for (int i = 0; i < audioDevices.length; i++) {
+      if (audioDevices[i].type == AudioDeviceType.WIREDHEADSET) {
         return true;
       }
     }
@@ -92,8 +90,8 @@ class _AudioManager {
 
   ///是否连接有蓝牙耳机
   bool get isBluetoothHeadsetOn {
-    for (int i = 0; i < _externalAudioDevices.length; i++) {
-      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHHEADSET) {
+    for (int i = 0; i < audioDevices.length; i++) {
+      if (audioDevices[i].type == AudioDeviceType.BLUETOOTHHEADSET) {
         return true;
       }
     }
@@ -102,8 +100,8 @@ class _AudioManager {
 
   ///是否连接有蓝牙音响
   bool get isBluetoothA2dpOn {
-    for (int i = 0; i < _externalAudioDevices.length; i++) {
-      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
+    for (int i = 0; i < audioDevices.length; i++) {
+      if (audioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
         return true;
       }
     }
@@ -112,9 +110,9 @@ class _AudioManager {
 
   ///蓝牙HFP设备名称
   String? get bluetoothHeadsetName {
-    for (int i = 0; i < _externalAudioDevices.length; i++) {
-      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHHEADSET) {
-        return _externalAudioDevices[i].name;
+    for (int i = 0; i < audioDevices.length; i++) {
+      if (audioDevices[i].type == AudioDeviceType.BLUETOOTHHEADSET) {
+        return audioDevices[i].name;
       }
     }
     return null;
@@ -122,9 +120,9 @@ class _AudioManager {
 
   ///蓝牙A2DP设备名称
   String? get bluetoothA2dpName {
-    for (int i = 0; i < _externalAudioDevices.length; i++) {
-      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
-        return _externalAudioDevices[i].name;
+    for (int i = 0; i < audioDevices.length; i++) {
+      if (audioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
+        return audioDevices[i].name;
       }
     }
     return null;
@@ -255,7 +253,7 @@ class _AudioManager {
           name: e["name"]!, type: _getAudioDeviceTypeByString(e["type"]!));
     }).toList();
     _notifyAvailableAudioDevicesChanged(devices);
-    return _externalAudioDevices;
+    return audioDevices;
   }
 
   ///通知当前设备发生变化
@@ -275,7 +273,7 @@ class _AudioManager {
         .toList()
         .toString();
     if (devicesToString ==
-        _externalAudioDevices
+        audioDevices
             .map((e) {
               return {"name": e.name, "type": e.type.name};
             })
@@ -283,7 +281,7 @@ class _AudioManager {
             .toString()) {
       return;
     }
-    externalAudioDevicesNotifier.value = devices;
+    audioDevicesNotifier.value = devices;
   }
 
   ///获取当前音频输出设备

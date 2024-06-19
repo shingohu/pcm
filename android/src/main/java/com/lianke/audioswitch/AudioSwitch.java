@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -59,46 +60,76 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         this.audioManagerChannel = channel;
         this.audioManagerChannel.setMethodCallHandler(this);
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        enumerateDevices();
-
-
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("android.intent.action.HEADSET_PLUG");
-        this.applicationContext.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                int state = intent.getIntExtra("state", -1);
-                enumerateDevices();
-            }
-        }, intentFilter);
-
-
+//        IntentFilter intentFilter = new IntentFilter();
+//        intentFilter.addAction("android.intent.action.HEADSET_PLUG");
+//        this.applicationContext.registerReceiver(new BroadcastReceiver() {
+//            @Override
+//            public void onReceive(Context context, Intent intent) {
+//                int state = intent.getIntExtra("state", -1);
+//                Log.e(TAG, "耳机状态->" + state);
+//                enumerateDevices();
+//            }
+//        }, intentFilter);
         audioManager.registerAudioDeviceCallback(new AudioDeviceCallback() {
             @Override
             public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
-                mHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        enumerateDevices();
+                if (addedDevices.length == 1) {
+                    if (isWiredHeadsetAudioDevice(addedDevices[0])) {
+                        if (isBluetoothHeadsetOn() || isBluetoothA2dpOn()) {
+                            updateAudioDevices();
+                            return;
+                        }
                     }
-                }, 1000);
+                } else {
+                    for (int i = 0; i < addedDevices.length; i++) {
+                        if (isBluetoothHeadsetAudioDevice(addedDevices[i])) {
+                            return;
+                        }
+                    }
+                }
+                enumerateDevices();
             }
 
             @Override
             public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
-                mHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        enumerateDevices();
+                if (removedDevices.length == 1) {
+                    if (isWiredHeadsetAudioDevice(removedDevices[0])) {
+                        if (isBluetoothHeadsetOn() || isBluetoothA2dpOn()) {
+                            updateAudioDevices();
+                            return;
+                        }
                     }
-                }, 1000);
-
+                    if (isBluetoothHeadsetAudioDevice(removedDevices[0])) {
+                        updateAudioDevices();
+                        return;
+                    }
+                }
+                enumerateDevices();
             }
         }, new Handler());
 
     }
 
+
+    void updateAudioDevices() {
+        mHandler.removeCallbacks(updateAudioDevicesRunner);
+        mHandler.postDelayed(updateAudioDevicesRunner, 500);
+    }
+
+    Runnable updateAudioDevicesRunner = new Runnable() {
+        @Override
+        public void run() {
+            enumerateDevices();
+        }
+    };
+
     public void enumerateDevices() {
+        loadAvailableAudioDevices();
+        notifyCurrentAudioDeviceChanged();
+        notifyAvailableAudioDevicesChanged();
+    }
+
+    private void loadAvailableAudioDevices() {
         availableAudioDevices.clear();
         if (isBluetoothA2dpOn()) {
             availableAudioDevices.add(new AudioDevice(getBluetoothA2dpName(), AudioDeviceType.BLUETOOTHA2DP));
@@ -109,8 +140,27 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         if (isWiredHeadsetOn()) {
             availableAudioDevices.add(new AudioDevice(AudioDeviceType.WIREDHEADSET.name(), AudioDeviceType.WIREDHEADSET));
         }
-        notifyCurrentAudioDeviceChanged();
-        notifyAvailableAudioDevicesChanged();
+    }
+
+    private boolean isWiredHeadsetAudioDevice(AudioDeviceInfo deviceInfo) {
+        if (deviceInfo.getType() == AudioDeviceInfo.TYPE_USB_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isBluetoothHeadsetAudioDevice(AudioDeviceInfo deviceInfo) {
+        if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isBluetoothA2dpAudioDevice(AudioDeviceInfo deviceInfo) {
+        if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+            return true;
+        }
+        return false;
     }
 
 
@@ -134,7 +184,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         ///倒序
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            if (isBluetoothHeadsetAudioDevice(deviceInfo)) {
                 return true;
             }
         }
@@ -147,7 +197,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 GET_DEVICES_OUTPUTS);
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+            if (isBluetoothA2dpAudioDevice(deviceInfo)) {
                 return true;
             }
         }
@@ -160,7 +210,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         ///倒序 取最新的那个
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            if (isBluetoothHeadsetAudioDevice(deviceInfo)) {
                 return deviceInfo.getProductName().toString();
             }
         }
@@ -173,7 +223,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         ///倒序 取最新的那个
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+            if (isBluetoothA2dpAudioDevice(deviceInfo)) {
                 return deviceInfo.getProductName().toString();
             }
         }
@@ -182,6 +232,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     public List<Map<String, String>> getAvailableAudioDevices() {
+        loadAvailableAudioDevices();
         List<Map<String, String>> list = new ArrayList<>();
         for (int i = 0; i < availableAudioDevices.size(); i++) {
             AudioDevice device = availableAudioDevices.get(i);
@@ -231,7 +282,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 GET_DEVICES_OUTPUTS);
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+            if (isBluetoothA2dpAudioDevice(deviceInfo)) {
                 PCMPlayer.shared().setPreferredDevice(deviceInfo);
                 return;
             }
@@ -243,7 +294,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 GET_DEVICES_OUTPUTS);
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            if (isBluetoothHeadsetAudioDevice(deviceInfo)) {
                 PCMPlayer.shared().setPreferredDevice(deviceInfo);
                 return;
             }
@@ -256,8 +307,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 GET_DEVICES_OUTPUTS);
         for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_USB_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
-
+            if (isWiredHeadsetAudioDevice(deviceInfo)) {
                 PCMPlayer.shared().setPreferredDevice(deviceInfo);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     audioManager.setCommunicationDevice(deviceInfo);
@@ -265,6 +315,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 }
             }
         }
+
     }
 
 
@@ -453,8 +504,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     private void setScoState(BluetoothScoState state) {
         if (this.scoState != state) {
             this.scoState = state;
-            notifyCurrentAudioDeviceChanged();
             notifyBluetoothScoStateChange();
+            notifyCurrentAudioDeviceChanged();
         }
     }
 
@@ -575,7 +626,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 };
             }
 
-            if ((deviceInfo.getType() == AudioDeviceInfo.TYPE_USB_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) && isWiredHeadsetOn()) {
+            if (isWiredHeadsetAudioDevice(deviceInfo) && isWiredHeadsetOn()) {
 
                 return new HashMap<String, String>() {
                     {
@@ -594,7 +645,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 };
             }
 
-            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP && isBluetoothA2dpOn()) {
+            if (isBluetoothA2dpAudioDevice(deviceInfo) && isBluetoothA2dpOn()) {
                 return new HashMap<String, String>() {
                     {
                         put("name", deviceInfo.getProductName().toString());
@@ -650,36 +701,48 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     }
 
 
-    void notifyCurrentAudioDeviceChanged() {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (audioManagerChannel != null) {
-                    audioManagerChannel.invokeMethod("onCurrentAudioDeviceChanged", getCurrentAudioDevice());
-                }
+    Runnable onCurrentAudioDeviceChangedRunner = new Runnable() {
+        @Override
+        public void run() {
+            if (audioManagerChannel != null) {
+                audioManagerChannel.invokeMethod("onCurrentAudioDeviceChanged", getCurrentAudioDevice());
             }
-        });
+        }
+    };
+
+
+    void notifyCurrentAudioDeviceChanged() {
+        mHandler.removeCallbacks(onCurrentAudioDeviceChangedRunner);
+        mHandler.post(onCurrentAudioDeviceChangedRunner);
     }
+
+
+    Runnable onAudioDevicesChanged = new Runnable() {
+        @Override
+        public void run() {
+            if (audioManagerChannel != null) {
+                audioManagerChannel.invokeMethod("onAudioDevicesChanged", getAvailableAudioDevices());
+            }
+        }
+    };
 
     void notifyAvailableAudioDevicesChanged() {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (audioManagerChannel != null) {
-                    audioManagerChannel.invokeMethod("onAudioDevicesChanged", getAvailableAudioDevices());
-                }
-            }
-        });
+        mHandler.removeCallbacks(onAudioDevicesChanged);
+        mHandler.post(onAudioDevicesChanged);
     }
 
-    void notifyBluetoothScoStateChange() {
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (audioManagerChannel != null) {
-                    audioManagerChannel.invokeMethod("bluetoothScoChanged", scoState.ordinal());
-                }
+
+    Runnable bluetoothScoChangedRunner = new Runnable() {
+        @Override
+        public void run() {
+            if (audioManagerChannel != null) {
+                audioManagerChannel.invokeMethod("bluetoothScoChanged", scoState.ordinal());
             }
-        });
+        }
+    };
+
+    void notifyBluetoothScoStateChange() {
+        mHandler.removeCallbacks(bluetoothScoChangedRunner);
+        mHandler.post(bluetoothScoChangedRunner);
     }
 };
