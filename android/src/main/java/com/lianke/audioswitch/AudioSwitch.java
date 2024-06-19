@@ -20,6 +20,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 
+import com.lianke.pcm.player.PCMPlayer;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +33,8 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
 public class AudioSwitch implements MethodChannel.MethodCallHandler {
+
+    private static final String TAG = "AudioSwitch";
 
 
     ///有效的音频输出设备
@@ -56,15 +60,39 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         this.audioManagerChannel.setMethodCallHandler(this);
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         enumerateDevices();
+
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("android.intent.action.HEADSET_PLUG");
+        this.applicationContext.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                int state = intent.getIntExtra("state", -1);
+                enumerateDevices();
+            }
+        }, intentFilter);
+
+
         audioManager.registerAudioDeviceCallback(new AudioDeviceCallback() {
             @Override
             public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
-                enumerateDevices();
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        enumerateDevices();
+                    }
+                }, 1000);
             }
 
             @Override
             public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
-                enumerateDevices();
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        enumerateDevices();
+                    }
+                }, 1000);
+
             }
         }, new Handler());
 
@@ -117,7 +145,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     public boolean isBluetoothA2dpOn() {
         AudioDeviceInfo[] devices = audioManager.getDevices(
                 GET_DEVICES_OUTPUTS);
-        for (int i = devices.length - 1; i > 0; i--) {
+        for (int i = devices.length - 1; i >= 0; i--) {
             AudioDeviceInfo deviceInfo = devices[i];
             if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
                 return true;
@@ -175,21 +203,98 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
      * @param index
      */
     public void setCurrentAudioDevice(int index) {
-        if (index == AudioDeviceType.BLUETOOTHHEADSET.ordinal()) {
+        if (index == AudioDeviceType.BLUETOOTHHEADSET.ordinal() && isBluetoothHeadsetOn()) {
             openSpeaker(false);
+            setBluetoothHeadsetOn();
             startBluetoothSco();
-            notifyCurrentAudioDeviceChanged();
-        } else if (index == AudioDeviceType.SPEAKER.ordinal()) {
-            stopBluetoothSco();
-            openSpeaker(true);
-            notifyCurrentAudioDeviceChanged();
-        } else {
+            return;
+        } else if (index == AudioDeviceType.BLUETOOTHA2DP.ordinal() && isBluetoothA2dpOn()) {
+            setBluetoothA2dpOn();
             stopBluetoothSco();
             openSpeaker(false);
-            notifyCurrentAudioDeviceChanged();
+        } else if (index == AudioDeviceType.WIREDHEADSET.ordinal() && isWiredHeadsetOn()) {
+            setWiredHeadsetOn();
+            openSpeaker(false);
+        } else if (index == AudioDeviceType.SPEAKER.ordinal()) {
+            setSpeakerOn();
+            openSpeaker(true);
+        } else {
+            openSpeaker(false);
+            setBuildInEarpieceOn();
+        }
+        notifyCurrentAudioDeviceChanged();
+    }
+
+    ///设置音频输出到蓝牙
+    private void setBluetoothA2dpOn() {
+        AudioDeviceInfo[] devices = audioManager.getDevices(
+                GET_DEVICES_OUTPUTS);
+        for (int i = devices.length - 1; i >= 0; i--) {
+            AudioDeviceInfo deviceInfo = devices[i];
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) {
+                PCMPlayer.shared().setPreferredDevice(deviceInfo);
+                return;
+            }
         }
     }
 
+    private void setBluetoothHeadsetOn() {
+        AudioDeviceInfo[] devices = audioManager.getDevices(
+                GET_DEVICES_OUTPUTS);
+        for (int i = devices.length - 1; i >= 0; i--) {
+            AudioDeviceInfo deviceInfo = devices[i];
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                PCMPlayer.shared().setPreferredDevice(deviceInfo);
+                return;
+            }
+        }
+    }
+
+    private void setWiredHeadsetOn() {
+
+        AudioDeviceInfo[] devices = audioManager.getDevices(
+                GET_DEVICES_OUTPUTS);
+        for (int i = devices.length - 1; i >= 0; i--) {
+            AudioDeviceInfo deviceInfo = devices[i];
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_USB_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+
+                PCMPlayer.shared().setPreferredDevice(deviceInfo);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.setCommunicationDevice(deviceInfo);
+                    return;
+                }
+            }
+        }
+    }
+
+
+    private void setBuildInEarpieceOn() {
+        AudioDeviceInfo[] devices = audioManager.getDevices(
+                GET_DEVICES_OUTPUTS);
+        for (int i = devices.length - 1; i >= 0; i--) {
+            AudioDeviceInfo deviceInfo = devices[i];
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                PCMPlayer.shared().setPreferredDevice(deviceInfo);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.setCommunicationDevice(deviceInfo);
+                }
+                return;
+            }
+        }
+    }
+
+
+    private void setSpeakerOn() {
+        AudioDeviceInfo[] devices = audioManager.getDevices(
+                GET_DEVICES_OUTPUTS);
+        for (int i = devices.length - 1; i >= 0; i--) {
+            AudioDeviceInfo deviceInfo = devices[i];
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                PCMPlayer.shared().setPreferredDevice(deviceInfo);
+                return;
+            }
+        }
+    }
 
     public void openSpeaker(boolean open) {
         audioManager.setSpeakerphoneOn(open);
@@ -295,18 +400,22 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
                             if (scoState == BluetoothScoState.CONNECTED) {
                                 audioManager.setBluetoothScoOn(false);
-                                setScoState(BluetoothScoState.DISCONNECTED);
+                                audioManager.stopBluetoothSco();
                                 unRegisterSco();
+                                setScoState(BluetoothScoState.DISCONNECTED);
                                 Log.e("AudioManager", "SCO已断开");
                             } else if (scoState == BluetoothScoState.CONNECTING) {
-                                setScoState(BluetoothScoState.ERROR);
+                                audioManager.setBluetoothScoOn(false);
+                                audioManager.stopBluetoothSco();
                                 unRegisterSco();
+                                setScoState(BluetoothScoState.ERROR);
                                 Log.e("AudioManager", "SCO开启失败");
                             }
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_ERROR) {
                             audioManager.setBluetoothScoOn(false);
-                            setScoState(BluetoothScoState.ERROR);
+                            audioManager.stopBluetoothSco();
                             unRegisterSco();
+                            setScoState(BluetoothScoState.ERROR);
                             Log.e("AudioManager", "SCO开启失败");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_CONNECTING) {
                             Log.e("AudioManager", "SCO开启中");
@@ -344,8 +453,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     private void setScoState(BluetoothScoState state) {
         if (this.scoState != state) {
             this.scoState = state;
-            notifyBluetoothScoStateChange();
             notifyCurrentAudioDeviceChanged();
+            notifyBluetoothScoStateChange();
         }
     }
 
@@ -376,13 +485,10 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         } else if ("getCurrentAudioDevice".equals(method)) {
             result.success(getCurrentAudioDevice());
         } else if ("setCurrentAudioDevice".equals(method)) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    int index = (int) call.arguments;
-                    setCurrentAudioDevice(index);
-                    result.success(true);
-                }
+            new Thread(() -> {
+                int index = (int) call.arguments;
+                setCurrentAudioDevice(index);
+                result.success(true);
             }).start();
 
         }
@@ -448,11 +554,57 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     public Map<String, String> getCurrentAudioDevice() {
+        AudioDeviceInfo deviceInfo = PCMPlayer.shared().getPreferredDevice();
 
-//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-//            AudioDeviceInfo audioDeviceInfo = audioManager.getCommunicationDevice();
-//            Log.e("T", audioDeviceInfo.toString());
-//        }
+        if (deviceInfo != null) {
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                return new HashMap<String, String>() {
+                    {
+                        put("name", AudioDeviceType.SPEAKER.name());
+                        put("type", AudioDeviceType.SPEAKER.name());
+                    }
+                };
+            }
+
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                return new HashMap<String, String>() {
+                    {
+                        put("name", AudioDeviceType.EARPIECE.name());
+                        put("type", AudioDeviceType.EARPIECE.name());
+                    }
+                };
+            }
+
+            if ((deviceInfo.getType() == AudioDeviceInfo.TYPE_USB_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADSET || deviceInfo.getType() == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) && isWiredHeadsetOn()) {
+
+                return new HashMap<String, String>() {
+                    {
+                        put("name", AudioDeviceType.WIREDHEADSET.name());
+                        put("type", AudioDeviceType.WIREDHEADSET.name());
+                    }
+                };
+            }
+
+            if ((scoState == BluetoothScoState.CONNECTED || scoState == BluetoothScoState.CONNECTING) && isBluetoothHeadsetOn()) {
+                return new HashMap<String, String>() {
+                    {
+                        put("name", deviceInfo.getProductName().toString());
+                        put("type", AudioDeviceType.BLUETOOTHHEADSET.name());
+                    }
+                };
+            }
+
+            if (deviceInfo.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP && isBluetoothA2dpOn()) {
+                return new HashMap<String, String>() {
+                    {
+                        put("name", deviceInfo.getProductName().toString());
+                        put("type", AudioDeviceType.BLUETOOTHA2DP.name());
+                    }
+                };
+            }
+        }
+
+
         if (isSpeakerOn()) {
             return new HashMap<String, String>() {
                 {
@@ -487,6 +639,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             }
 
 
+            setBuildInEarpieceOn();
             return new HashMap<String, String>() {
                 {
                     put("name", AudioDeviceType.EARPIECE.name());

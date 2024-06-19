@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'dart:io';
 
 late _AudioManager AudioManager = _AudioManager._();
 
@@ -56,13 +57,16 @@ AudioDeviceType _getAudioDeviceTypeByString(String type) {
 
 ///音频管理
 class _AudioManager {
-  ///android sco 状态(暂时没用)
+  ///android sco 状态变更
   ValueNotifier<BluetoothScoState> bluetoothScoStateNotifier =
-  ValueNotifier(BluetoothScoState.DISCONNECTED);
+      ValueNotifier(BluetoothScoState.DISCONNECTED);
+
+  ///android sco 状态
+  BluetoothScoState get bluetoothScoState => bluetoothScoStateNotifier.value;
 
   ///外置音频输出设备变更
   ValueNotifier<List<AudioDevice>> externalAudioDevicesNotifier =
-  ValueNotifier([]);
+      ValueNotifier([]);
 
   ///外置音频输出设备(不包含内置耳机和内置扬声器)
   List<AudioDevice> get _externalAudioDevices =>
@@ -75,13 +79,6 @@ class _AudioManager {
 
   ///当前的输出设备
   AudioDevice get currentAudioDevice => currentAudioDeviceNotifier.value;
-
-  ///是否有可用的音频输出设备(不包含内置耳机和内置扬声器,这里可包含有蓝牙音响)
-  bool get hasExternalAudioDevice => _externalAudioDevices.length > 0;
-
-  ///是否有可用的音频输出设备(只包含蓝牙耳机和无线耳机)
-  bool get hasExternalAudioDeviceInVoiceChatMode =>
-      isWiredHeadsetOn || isBluetoothHeadsetOn;
 
   ///是否连接有无线耳机
   bool get isWiredHeadsetOn {
@@ -103,7 +100,17 @@ class _AudioManager {
     return false;
   }
 
-  ///蓝牙设备名称
+  ///是否连接有蓝牙音响
+  bool get isBluetoothA2dpOn {
+    for (int i = 0; i < _externalAudioDevices.length; i++) {
+      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  ///蓝牙HFP设备名称
   String? get bluetoothHeadsetName {
     for (int i = 0; i < _externalAudioDevices.length; i++) {
       if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHHEADSET) {
@@ -113,15 +120,29 @@ class _AudioManager {
     return null;
   }
 
-  _AudioManager._() {
-    _init();
+  ///蓝牙A2DP设备名称
+  String? get bluetoothA2dpName {
+    for (int i = 0; i < _externalAudioDevices.length; i++) {
+      if (_externalAudioDevices[i].type == AudioDeviceType.BLUETOOTHA2DP) {
+        return _externalAudioDevices[i].name;
+      }
+    }
+    return null;
   }
 
-  void _init() async {
+  _AudioManager._() {}
+
+  bool _hasInit = false;
+
+  Future<void> initialize() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    bluetoothScoStateNotifier.value = await _isBluetoothScoOn
+    if (_hasInit) {
+      return;
+    }
+    _hasInit = true;
+    bluetoothScoStateNotifier.value = await isBluetoothScoOn
         ? BluetoothScoState.CONNECTED
         : BluetoothScoState.DISCONNECTED;
     await _getCurrentAudioDevice();
@@ -210,7 +231,7 @@ class _AudioManager {
   }
 
   ///蓝牙sco是否已开启
-  Future<bool> get _isBluetoothScoOn async {
+  Future<bool> get isBluetoothScoOn async {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod("isBluetoothScoOn");
     }
@@ -228,7 +249,7 @@ class _AudioManager {
   ///获取有效的音频输出设备
   Future<List<AudioDevice>> _getAvailableAudioDevices() async {
     List<dynamic> result =
-    await _channel.invokeMethod("getAvailableAudioDevices");
+        await _channel.invokeMethod("getAvailableAudioDevices");
     List<AudioDevice> devices = result.map((e) {
       return AudioDevice(
           name: e["name"]!, type: _getAudioDeviceTypeByString(e["type"]!));
@@ -247,30 +268,28 @@ class _AudioManager {
 
   ///通知外接设备发生变化
   void _notifyAvailableAudioDevicesChanged(List<AudioDevice> devices) {
-    if (devices.length != _externalAudioDevices.length) {
-      String devicesToString = devices
-          .map((e) {
-        return {"name": e.name, "type": e.type.name};
-      })
-          .toList()
-          .toString();
-      if (devicesToString ==
-          _externalAudioDevices
-              .map((e) {
-            return {"name": e.name, "type": e.type.name};
-          })
-              .toList()
-              .toString()) {
-        return;
-      }
-      externalAudioDevicesNotifier.value = devices;
+    String devicesToString = devices
+        .map((e) {
+          return {"name": e.name, "type": e.type.name};
+        })
+        .toList()
+        .toString();
+    if (devicesToString ==
+        _externalAudioDevices
+            .map((e) {
+              return {"name": e.name, "type": e.type.name};
+            })
+            .toList()
+            .toString()) {
+      return;
     }
+    externalAudioDevicesNotifier.value = devices;
   }
 
   ///获取当前音频输出设备
   Future<AudioDevice> _getCurrentAudioDevice() async {
     Map<dynamic, dynamic> device =
-    await _channel.invokeMethod("getCurrentAudioDevice");
+        await _channel.invokeMethod("getCurrentAudioDevice");
     AudioDevice audioDevice = AudioDevice(
         name: device["name"]!,
         type: _getAudioDeviceTypeByString(device["type"]!));
@@ -294,51 +313,12 @@ class _AudioManager {
       _notifyCurrentAudioDeviceChanged(AudioDevice(
           name: bluetoothHeadsetName ?? "",
           type: AudioDeviceType.BLUETOOTHHEADSET));
+    } else if (type == AudioDeviceType.BLUETOOTHA2DP &&
+        isBluetoothA2dpOn &&
+        !isBluetoothHeadsetOn) {
+      _notifyCurrentAudioDeviceChanged(AudioDevice(
+          name: bluetoothA2dpName ?? "", type: AudioDeviceType.BLUETOOTHA2DP));
     }
     await _channel.invokeMethod("setCurrentAudioDevice", type.index);
-  }
-
-  ///开始语音通话
-  ///没有连接耳机之前的情况下 默认是否开启扬声器
-  Future<void> startVoiceChatMode({bool defaultToSpeaker = false}) async {
-    if (Platform.isAndroid) {
-      requestAudioFocus();
-      setAudioModeInCommunication();
-      if (isWiredHeadsetOn) {
-        setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
-      } else if (isBluetoothHeadsetOn) {
-        setCurrentAudioDevice(AudioDeviceType.BLUETOOTHHEADSET);
-      } else if (defaultToSpeaker) {
-        setCurrentAudioDevice(AudioDeviceType.SPEAKER);
-      } else {
-        setCurrentAudioDevice(AudioDeviceType.EARPIECE);
-      }
-    } else if (Platform.isIOS) {
-      await setPlayAndRecordSession(defaultToSpeaker: defaultToSpeaker);
-      if (isWiredHeadsetOn) {
-        setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
-      } else if (isBluetoothHeadsetOn) {
-        setCurrentAudioDevice(AudioDeviceType.BLUETOOTHHEADSET);
-      } else if (defaultToSpeaker) {
-        setCurrentAudioDevice(AudioDeviceType.SPEAKER);
-      } else {
-        setCurrentAudioDevice(AudioDeviceType.EARPIECE);
-      }
-    }
-  }
-
-  ///结束语音通话模式
-  Future<void> endVoiceChatMode() async {
-    if (Platform.isAndroid) {
-      setAudioModeNormal();
-      abandonAudioFocus();
-      if (hasExternalAudioDevice) {
-        setCurrentAudioDevice(AudioDeviceType.EARPIECE);
-      } else {
-        setCurrentAudioDevice(AudioDeviceType.SPEAKER);
-      }
-    } else if (Platform.isIOS) {
-      abandonAudioFocus();
-    }
   }
 }

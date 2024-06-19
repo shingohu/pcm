@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
-import 'package:pcm_example/recorder.dart';
+import 'package:pcm/pcm.dart';
+import 'package:pcm_example/output_test.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AudioManager.initialize();
   runApp(const MyApp());
 }
 
@@ -23,7 +26,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return OKToast(
       child: MaterialApp(
-        home: RecorderPage(),
+        home: OutputTestPage(),
       ),
     );
   }
