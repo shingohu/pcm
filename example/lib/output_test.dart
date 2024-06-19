@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
@@ -146,7 +145,6 @@ class _OutputTestPageState extends State<OutputTestPage> {
               }
             }
           });
-      setState(() {});
     } else {
       showToast("没有录音权限");
     }

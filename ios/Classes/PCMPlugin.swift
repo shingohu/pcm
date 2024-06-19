@@ -255,12 +255,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     ///打开扬声器
     func openSpeaker(){
-        
         ///这里异步执行,否则连续多切换几次,会导致音频延时严重,微信也有这个问题,目前无法解决
             do {
                 if(!self.isSpeakerOn()){
-                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-                   // try AVAudioSession.sharedInstance().setActive(true)
+                    let session = AVAudioSession.sharedInstance()
+                    try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
                     print("打开扬声器")
                 }
             }catch {
@@ -274,12 +273,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     ///关闭扬声器
     func closeSpeaker(){
         ///这里异步执行,否则连续多切换几次,会导致音频延时严重,微信也有这个问题,目前无法解决
-            
             do {
                 if(self.isSpeakerOn()){
-                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.none)
-                   // try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.01)
-                  //  try AVAudioSession.sharedInstance().setActive(true)
+                    let session = AVAudioSession.sharedInstance()
+                    try session.overrideOutputAudioPort(AVAudioSession.PortOverride.none)
                     print("关闭扬声器")
                 }
             }catch {
@@ -421,8 +418,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     }
     
     @objc func audioRouteChangeListener(_ notification:Notification) {
-        notifyCurrentAudioDeviceChanged();
-        notifyAudioDeviceChanged();
+        DispatchQueue.main.async{
+            self.notifyCurrentAudioDeviceChanged();
+            self.notifyAudioDeviceChanged();
+        }
     }
     
   
@@ -477,10 +476,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 devices.append(BLUETOOTHA2DP(name: port.portName).toDic())
             }
         }
-        
-        
-        
-        
         return devices;
     }
     
