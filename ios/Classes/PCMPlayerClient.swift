@@ -31,7 +31,7 @@ class PCMPlayerClient {
     
     public func initPlayer(){
         PCMPlayer.shared().audioCallBack = playAudioCallback;
-        setUp(samplateRate: samplateRate)
+        PCMPlayer.shared().setUp(Double(samplateRate))
     }
     
     public func setUp(samplateRate:Int){

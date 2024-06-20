@@ -36,6 +36,7 @@
     self = [super init];
     if (self) {
         [self setupRemoteIOUnit];
+        self->sampleRate = kRate;
     }
     return self;
 }
