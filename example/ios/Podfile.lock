@@ -3,6 +3,8 @@ PODS:
   - flutter_to_airplay (0.0.1):
     - Flutter
     - Mux-Stats-AVPlayer
+  - flutter_volume_controller (0.0.1):
+    - Flutter
   - Mux-Stats-AVPlayer (3.5.1):
     - Mux-Stats-Core (= 4.6.0)
   - Mux-Stats-Core (4.6.0)
@@ -15,6 +17,7 @@ PODS:
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_to_airplay (from `.symlinks/plugins/flutter_to_airplay/ios`)
+  - flutter_volume_controller (from `.symlinks/plugins/flutter_volume_controller/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
 
@@ -28,6 +31,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_to_airplay:
     :path: ".symlinks/plugins/flutter_to_airplay/ios"
+  flutter_volume_controller:
+    :path: ".symlinks/plugins/flutter_volume_controller/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   pcm:
@@ -36,6 +41,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_to_airplay: 3194fe6e4ca6ba1d9529c3c4194c32b9610d990f
+  flutter_volume_controller: e4d5832f08008180f76e30faf671ffd5a425e529
   Mux-Stats-AVPlayer: 1b1a877e5d8b57ca22e0717fa0a4eefef7529c40
   Mux-Stats-Core: 53902e414f077b2239ea10d909a4cf072c0d4d5c
   path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c

@@ -12,9 +12,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     private var audioManagerChannel:FlutterMethodChannel?
     
-    
-
-    
+    private let delayedCancellable = DelayedCancellable()
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = PCMPlugin()
@@ -47,12 +45,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         registrar.addApplicationDelegate(instance)
         
         PCMRecorderClient.shared.setOnAudioCallback(onAudioCallback: instance.recordAudioCallBack)
-        PCMPlayerClient.shared.initPlayer();
+        PCMPlayerClient.shared.initPlayer()
         instance.registerAudioListener()
-        instance.initAudioSessionForFast()
-        
-        
-        
+        //instance.initAudioSessionForFast()
     }
     
     
@@ -72,9 +67,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             try session.setCategory(.playAndRecord)
             try session.setMode(.voiceChat)
 //            AVAudioSessionModeVoiceChat，主要用于执行双向语音通信VoIP场景。只能是 AVAudioSessionCategoryPlayAndRecord Category下。在这个模式系统会自动配置AVAudioSessionCategoryOptionAllowBluetooth 这个选项。系统会自动选择最佳的内置麦克风组合支持语音聊天，比如插上耳机就使用耳机上的麦克风进行采集。使用此模式时，该设备的音调君合针对语音进行了优化，并且允许路线组仅缩小为适用于语音聊天的路线。如果应用程序未将其模式设置为其中一个聊天模式（语音，视频或游戏），则AVAudioSessionModeVoiceChat模式将被隐式设置。另一方面，如果应用程序先前已将其类别设置为AVAudioSessionCategoryPlayAndRecord并将其模式设置为AVAudioSessionModeVideoChat或AVAudioSessionModeGameChat，则实例化语音处理I / O音频单元不会导致模式发生更改。
-            
-            try AVAudioSession.sharedInstance().setCategory(.playback)
-            
+            try session.setCategory(.playback)
         }catch {
             print("设置音频模式为播放和录音模式失败")
             print(error)
@@ -128,9 +121,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             result(true)
         }else if(method == "unPlayLength"){
             result(PCMPlayerClient.shared.unPlayLength())
-        }
-        
-        else if(method == "abandonAudioFocus"){
+        }else if(method == "abandonAudioFocus"){
             DispatchQueue.global(qos: .userInitiated).async {
                 self.abandonAudioFocus()
                 // 回到主线程更新UI
@@ -156,15 +147,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "getAvailableAudioDevices"){
             result(self.getAvailableAudioDevices())
         }else if(method == "getCurrentAudioDevice"){
-            result(self.getCurrentAudioDevice())
+            result(self.getCurrentAudioDevice().toDic())
         }else if(method == "setCurrentAudioDevice"){
-            DispatchQueue.global(qos: .userInitiated).async {
-                let index = call.arguments as! Int;
-                self.setCurrentAudioDevice(type: index)
-                DispatchQueue.main.async{
-                    result(true)
-                }
-            }
+            let index = call.arguments as! Int;
+            self.setCurrentAudioDevice(type: index)
+            result(true)
+            
         }
         
         else if("pcm2wav" == method){
@@ -260,7 +248,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 if(!self.isSpeakerOn()){
                     let session = AVAudioSession.sharedInstance()
                     try session.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-                    print("打开扬声器")
                 }
             }catch {
                 print(error)
@@ -270,17 +257,14 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     }
     
     
-    ///关闭扬声器
-    func closeSpeaker(){
-        ///这里异步执行,否则连续多切换几次,会导致音频延时严重,微信也有这个问题,目前无法解决
+
+    ///设置音频输出回到默认设置
+    func overrideOutputAudioPortNone(){
             do {
-                if(self.isSpeakerOn()){
-                    let session = AVAudioSession.sharedInstance()
-                    try session.overrideOutputAudioPort(AVAudioSession.PortOverride.none)
-                    print("关闭扬声器")
-                }
+                let session = AVAudioSession.sharedInstance()
+                try session.overrideOutputAudioPort(AVAudioSession.PortOverride.none)
             }catch {
-                print("关闭扬声器失败")
+                print("overrideOutputAudioPortNone失败")
                 print(error)
             }
         
@@ -418,12 +402,20 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     }
     
     @objc func audioRouteChangeListener(_ notification:Notification) {
+        delayedCancellable.cancel()
+        delayedCancellable.execute(task: {
+            self.notifyAudioDeviceInMainThread()
+        }(), afterDelay: 0.1)
+    }
+    
+    
+    
+    func notifyAudioDeviceInMainThread(){
         DispatchQueue.main.async{
             self.notifyCurrentAudioDeviceChanged();
             self.notifyAudioDeviceChanged();
         }
     }
-    
   
     
     
@@ -447,13 +439,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     func getAvailableAudioDevices() ->Array<Dictionary<String,Any>>{
         
+        
+        var audioDevices = Array<AudioDevice>()
+        
         let audioSession = AVAudioSession.sharedInstance()
-        
-        var devices = Array<Dictionary<String,Any>>();
-        
-        
-        
-        
         var bluetoothHfp:AVAudioSessionPortDescription? ;
         
         if(audioSession.isInputAvailable){
@@ -463,73 +452,81 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 }
             }
         }
-        
         if(bluetoothHfp != nil){
-            devices.append(BLUETOOTHHEADSET(name: bluetoothHfp!.portName).toDic());
+            audioDevices.append(BLUETOOTHHEADSET(name: bluetoothHfp!.portName))
         }
-        
         
         for port in audioSession.currentRoute.outputs {
             if(port.portType == .headphones){
-                devices.append(WIREDHEADSET().toDic())
-            }else if(port.portType == .bluetoothA2DP){
-                devices.append(BLUETOOTHA2DP(name: port.portName).toDic())
+                audioDevices.append(WIREDHEADSET())
+            }
+            if(port.portType == .bluetoothA2DP){
+                audioDevices.append(BLUETOOTHA2DP(name: port.portName))
+            }
+            if(port.portType == .bluetoothHFP){
+                audioDevices.removeAll { device in
+                    return device.type == AudioDeviceType.BLUETOOTHHEADSET || device.type == AudioDeviceType.BLUETOOTHA2DP
+                }
+                audioDevices.append(BLUETOOTHHEADSET(name: port.portName))
             }
         }
-        return devices;
+        return audioDevices.map { $0.toDic() }
     }
     
     
     
     ///获取当前的输出设备
-    func getCurrentAudioDevice() ->Dictionary<String, Any>{
+    func getCurrentAudioDevice() ->AudioDevice{
         let audioSession = AVAudioSession.sharedInstance()
         
         for port in audioSession.currentRoute.outputs {
-            
             if(port.portType == .headphones){
-                return WIREDHEADSET().toDic();
+                return WIREDHEADSET()
             }
-            
-            if(port.portType == .bluetoothA2DP){
-                
-                return BLUETOOTHA2DP(name: port.portName).toDic()
-            }
-            
             if(port.portType == .bluetoothHFP){
-   
-                return BLUETOOTHHEADSET(name: port.portName).toDic()
+                return BLUETOOTHHEADSET(name: port.portName)
+            }
+            if(port.portType == .bluetoothA2DP){
+                return BLUETOOTHA2DP(name: port.portName)
             }
             if(port.portType == .builtInSpeaker){
-                return SPEAKER().toDic()
+                return SPEAKER()
             }
             if(port.portType == .builtInReceiver){
-                return EARPIECE().toDic()
+                return EARPIECE()
             }
         }
         
-        return EARPIECE().toDic();
+        return EARPIECE();
         
         
     }
     
     
     func setCurrentAudioDevice(type:Int){
+        if(getCurrentAudioDevice().type.rawValue == type){
+            return
+        }
         if(type == AudioDeviceType.SPEAKER.rawValue){
             self.openSpeaker();
+            
         }else if(type == AudioDeviceType.BLUETOOTHHEADSET.rawValue){
-            self.closeSpeaker()
-            self.setCurrentAudioDeviceWithBluetoothHeadset()
-            notifyCurrentAudioDeviceChanged()
-            notifyAudioDeviceChanged()
-        }else if(type == AudioDeviceType.EARPIECE.rawValue){
-            self.closeSpeaker()
-            self.setCurrentAudioDeviceWithEarpiece()
-            notifyCurrentAudioDeviceChanged()
-            notifyAudioDeviceChanged()
-        }else {
-            self.closeSpeaker()
+            self.overrideOutputAudioPortNone()
+            if(getCurrentAudioDevice().type != AudioDeviceType.BLUETOOTHHEADSET){
+                self.setCurrentAudioDeviceWithBluetoothHeadset()
+            }
+        }else if(type == AudioDeviceType.WIREDHEADSET.rawValue){
+            self.overrideOutputAudioPortNone()
+            if(getCurrentAudioDevice().type == AudioDeviceType.BLUETOOTHHEADSET){
+                self.setBuildInMic()
+            }
+        }else{
+            self.overrideOutputAudioPortNone()
+            if(getCurrentAudioDevice().type == AudioDeviceType.SPEAKER){
+                self.setBuildInReceiverOn()
+            }
         }
+        notifyAudioDeviceInMainThread()
     }
     
     
@@ -548,8 +545,8 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             }
     }
     
-    ///设置输出设备为听筒
-    func setCurrentAudioDeviceWithEarpiece(){
+    ///设置输入设备为MIC
+    func setBuildInMic(){
         let audioSession = AVAudioSession.sharedInstance()
         do{
             for port in audioSession.availableInputs!{
@@ -562,12 +559,27 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 print(error)
             }
     }
-    
-    
-    
+
+    ///使用听筒
+    func setBuildInReceiverOn(){
+            do {
+                let session = AVAudioSession.sharedInstance()
+                if(session.category == .playAndRecord){
+                    try session.setCategory(session.category, mode: session.mode, options: [.allowBluetooth,.allowBluetoothA2DP])
+                }else if(session.category == .playback){
+                    try session.setCategory(session.category, mode: session.mode, options: [.allowBluetoothA2DP])
+                }else if(session.category == .record){
+                    try session.setCategory(session.category, mode: session.mode, options: [.allowBluetooth])
+                }else{
+                    try session.setCategory(session.category, mode: session.mode, options: [])
+                }
+            }catch {
+                print(error)
+            }
+    }
     
     func notifyCurrentAudioDeviceChanged(){
-        audioManagerChannel?.invokeMethod("onCurrentAudioDeviceChanged", arguments: self.getCurrentAudioDevice())
+        audioManagerChannel?.invokeMethod("onCurrentAudioDeviceChanged", arguments: self.getCurrentAudioDevice().toDic())
     }
     
     
@@ -586,3 +598,22 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     }
     
 }
+
+
+class DelayedCancellable {
+    private var workItem: DispatchWorkItem?
+ 
+    func execute(task: @escaping @autoclosure () -> Void, afterDelay seconds: TimeInterval) {
+        workItem?.cancel() // 取消之前的任务
+ 
+        let newWorkItem = DispatchWorkItem(block: task)
+        workItem = newWorkItem
+ 
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: newWorkItem)
+    }
+ 
+    func cancel() {
+        workItem?.cancel()
+    }
+}
+

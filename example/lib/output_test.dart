@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
@@ -151,14 +152,17 @@ class _OutputTestPageState extends State<OutputTestPage> {
   }
 
   Future<void> requestAudioFocus() async {
-    AudioManager.requestAudioFocus();
     if (Platform.isAndroid) {
-      await AudioManager.setAudioModeInCommunication();
+      AudioManager.requestAudioFocus();
+      AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
-      await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
+      AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
     PCMPlayer.start(Uint8List(0));
-    setAudioDevice();
+    if (Platform.isAndroid) {
+      ///苹果不设置
+      setAudioDevice();
+    }
   }
 
   Future<void> setAudioDevice() async {

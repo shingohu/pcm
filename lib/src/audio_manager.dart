@@ -223,8 +223,6 @@ class _AudioManager {
       await _channel.invokeMethod("setPlayAndRecordSession", {
         "defaultToSpeaker": defaultToSpeaker,
       });
-      await _getCurrentAudioDevice();
-      await _getAvailableAudioDevices();
     }
   }
 
@@ -300,22 +298,25 @@ class _AudioManager {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    if (type == AudioDeviceType.WIREDHEADSET && isWiredHeadsetOn) {
-      _notifyCurrentAudioDeviceChanged(WiredHeadset);
-    } else if (type == AudioDeviceType.SPEAKER) {
-      _notifyCurrentAudioDeviceChanged(Speaker);
-    } else if (type == AudioDeviceType.EARPIECE) {
-      _notifyCurrentAudioDeviceChanged(Earpiece);
-    } else if (type == AudioDeviceType.BLUETOOTHHEADSET &&
-        isBluetoothHeadsetOn) {
-      _notifyCurrentAudioDeviceChanged(AudioDevice(
-          name: bluetoothHeadsetName ?? "",
-          type: AudioDeviceType.BLUETOOTHHEADSET));
-    } else if (type == AudioDeviceType.BLUETOOTHA2DP &&
-        isBluetoothA2dpOn &&
-        !isBluetoothHeadsetOn) {
-      _notifyCurrentAudioDeviceChanged(AudioDevice(
-          name: bluetoothA2dpName ?? "", type: AudioDeviceType.BLUETOOTHA2DP));
+    if (Platform.isAndroid) {
+      if (type == AudioDeviceType.WIREDHEADSET && isWiredHeadsetOn) {
+        _notifyCurrentAudioDeviceChanged(WiredHeadset);
+      } else if (type == AudioDeviceType.SPEAKER) {
+        _notifyCurrentAudioDeviceChanged(Speaker);
+      } else if (type == AudioDeviceType.EARPIECE) {
+        _notifyCurrentAudioDeviceChanged(Earpiece);
+      } else if (type == AudioDeviceType.BLUETOOTHHEADSET &&
+          isBluetoothHeadsetOn) {
+        _notifyCurrentAudioDeviceChanged(AudioDevice(
+            name: bluetoothHeadsetName ?? "",
+            type: AudioDeviceType.BLUETOOTHHEADSET));
+      } else if (type == AudioDeviceType.BLUETOOTHA2DP &&
+          isBluetoothA2dpOn &&
+          !isBluetoothHeadsetOn) {
+        _notifyCurrentAudioDeviceChanged(AudioDevice(
+            name: bluetoothA2dpName ?? "",
+            type: AudioDeviceType.BLUETOOTHA2DP));
+      }
     }
     await _channel.invokeMethod("setCurrentAudioDevice", type.index);
   }
