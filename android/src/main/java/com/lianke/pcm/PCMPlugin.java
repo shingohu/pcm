@@ -108,6 +108,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("stopRecording".equals(method)) {
             PCMRecorder.shared().stop();
             result.success(true);
+        } else if ("releaseRecorder".equals(method)) {
+            PCMRecorder.shared().release();
+            result.success(true);
         } else if ("requestRecordPermission".equals(method)) {
             requestRecordPermission(result);
         } else if ("checkRecordPermission".equals(method)) {
@@ -123,16 +126,19 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             byte[] data = call.argument("data");
             int sampleRateInHz = call.argument("sampleRateInHz");
             boolean voiceChat = call.argument("voiceChat");
-            if (!PCMPlayer.shared().hasInit()) {
+            if (!PCMPlayer.shared().hasInit() || !PCMPlayer.shared().isPlaying()) {
                 audioSwitch.requestAudioFocus();
-                PCMPlayer.shared().init(sampleRateInHz, voiceChat);
             }
+            PCMPlayer.shared().init(sampleRateInHz, voiceChat);
             PCMPlayer.shared().play(data);
             result.success(true);
         } else if ("isPlaying".equals(method)) {
             result.success(PCMPlayer.shared().isPlaying());
         } else if ("stopPlaying".equals(method)) {
             PCMPlayer.shared().stop();
+            result.success(true);
+        } else if ("releasePlayer".equals(method)) {
+            PCMPlayer.shared().release();
             result.success(true);
         } else if ("unPlayLength".equals(method)) {
             result.success(PCMPlayer.shared().unPlayLength());

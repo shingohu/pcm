@@ -376,7 +376,6 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     private void startBluetoothSco() {
         if (isBluetoothHeadsetOn()) {
             boolean isScoOn = isBluetoothScoOn();
-            setAudioModeInCommunication();
             registerSco();
             if (!isScoOn) {
                 ///android 13
@@ -539,9 +538,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             new Thread(() -> {
                 int index = (int) call.arguments;
                 setCurrentAudioDevice(index);
-                result.success(true);
+                mHandler.post(() -> result.success(true));
             }).start();
-
         }
     }
 
@@ -583,24 +581,20 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     }
 
 
+    //设置通话模式(耗时大约200ms)
     public void setAudioModeInCommunication() {
         if (mActivity != null) {
             mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
         }
-        if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
-            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-            //Log.e("AudioManager", "MODE->MODE_IN_COMMUNICATION");
-        }
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
     }
 
+    //设置正常模式(耗时大约200ms)
     public void setAudioModeNormal() {
         if (mActivity != null) {
             mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         }
-        if (audioManager.getMode() != AudioManager.MODE_NORMAL) {
-            audioManager.setMode(AudioManager.MODE_NORMAL);
-            // Log.e("AudioManager", "MODE->MODE_NORMAL");
-        }
+        audioManager.setMode(AudioManager.MODE_NORMAL);
     }
 
 

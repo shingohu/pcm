@@ -35,52 +35,37 @@
     self = [super init];
     if (self) {
         [self setupRemoteIOUnit];
-        hasInitReomteIOUnit = YES;
     }
     return self;
 }
-- (void)start:(double)sampleRate{
+
+
+-(void)setUp:(double)sampleRate{
+    [self setupRemoteIOUnit];
+    [self setAudioFormat:sampleRate];
+}
+
+
+
+- (void)start{
     if(!self.isRunning){
-      //  NSInteger start = [self getNowDateFormatInteger];
-      //  NSLog(@"开始录音%ld",(long)start);
-        
-//        NSError* error;
-//        [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setPreferredInputNumberOfChannels:1 error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setActive:YES error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        
-        [self setupRemoteIOUnit];
-        
-        [self setAudioFormat:sampleRate];
-        //启用录音功能(提前设置这个会导致请求录音权限)
+        //NSLog(@"开始录音%ld",(long)([self getNowDateFormatInteger]));
+        //long start = [self getNowDateFormatInteger];
+            //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
         CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                        kAudioOutputUnitProperty_EnableIO,
-                                        kAudioUnitScope_Input,
-                                        1,
-                                        &inputEnableFlag,
-                                        sizeof(inputEnableFlag)),
-                   "Open input of bus 1 failed");
-        
+                                            kAudioOutputUnitProperty_EnableIO,
+                                            kAudioUnitScope_Input,
+                                            1,
+                                            &inputEnableFlag,
+                                            sizeof(inputEnableFlag)),
+                       "Open input of bus 1 failed");
         CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
         CheckError(AUGraphStart(_graph), "AUGraphStart failed");
+        
         AudioOutputUnitStart(_remoteIOUnit);
         self.isRunning = YES;
-      //  NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
-        
+        //NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
     }
 }
 - (void)stop{
@@ -89,7 +74,6 @@
         CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
         self.isRunning = NO;
-        hasInitReomteIOUnit = NO;
         self.audioCallBack(nil);
     }
 }
@@ -117,6 +101,7 @@
         return ;
     }
 
+    hasInitReomteIOUnit = YES;
     //Create graph
     CheckError(NewAUGraph(&_graph),
                "NewAUGraph failed");
@@ -278,7 +263,6 @@ OSStatus _recordCallback(void *inRefCon,
             AudioBuffer buffer = bufferList.mBuffers[0];
             NSData *pcmBlock =[NSData dataWithBytes:buffer.mData length:buffer.mDataByteSize];
             audioRecorder.audioCallBack(pcmBlock);
-            
         }
     }
     return status;

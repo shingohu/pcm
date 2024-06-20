@@ -23,8 +23,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)shared;
 
-
-- (void)start:(double)sampleRate;
+- (void)setUp:(double)sampleRate;
+- (void)start;
 - (void)stop;
 
 

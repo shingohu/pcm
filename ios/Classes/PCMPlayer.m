@@ -21,56 +21,36 @@
 
 + (instancetype)shared{
 
-    static PCMPlayer *AudioRecord = nil;
+    static PCMPlayer *AudioPlayer = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        AudioRecord = [[self alloc] init];
+        AudioPlayer = [[self alloc] init];
     });
-    return AudioRecord;
+    return AudioPlayer;
 }
 - (instancetype)init
 {
     self = [super init];
     if (self) {
         [self setupRemoteIOUnit];
-        hasInitReomteIOUnit = YES;
     }
     return self;
 }
-- (void)start:(double)sampleRate{
-    if(!self.isRunning){
-        
-        
-       // NSInteger start = [self getNowDateFormatInteger];
-      //  NSLog(@"开始播放%ld",(long)start);
-//       NSError* error;
-//        [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setPreferredInputNumberOfChannels:1 error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
-//        [[AVAudioSession sharedInstance] setActive:YES error:&error];
-//        if(error){
-//            NSLog(@"%@",error);
-//        }
 
-        [self setupRemoteIOUnit];
-    
-        [self setAudioFormat:sampleRate];
+
+- (void)setUp:(double)sampleRate{
+    [self setupRemoteIOUnit];
+    [self setAudioFormat:sampleRate];
+}
+
+
+- (void)start{
+    if(!self.isRunning){
         CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
         CheckError(AUGraphStart(_graph), "AUGraphStart failed");
         AudioOutputUnitStart(_remoteIOUnit);
         self.isRunning = YES;
-        
       //  NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
-        
     }
 }
 
@@ -96,7 +76,6 @@
         CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
         self.isRunning = NO;
-        hasInitReomteIOUnit = NO;
     }
 }
 
@@ -105,6 +84,7 @@
     if(hasInitReomteIOUnit){
         return;
     }
+    hasInitReomteIOUnit = YES;
     //Create graph
     CheckError(NewAUGraph(&_graph),
                "NewAUGraph failed");

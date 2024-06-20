@@ -24,7 +24,8 @@ class PCMRecorderClient {
     
     
     ///需要读取的每帧大小
-    private var PRE_FRAME_SIZE:Int = 160;
+    private var PRE_FRAME_SIZE:Int = 160
+    private var samplateRate:Int = 8000
     public var isRecording = false
     ///是否需要编码为Adpcm
     private var encodeToADPCM = false
@@ -37,29 +38,34 @@ class PCMRecorderClient {
     
     private var onAudioCallback:OnAudioCallback?
     
-
     
     
+    public func initRecorder(onAudioCallback:OnAudioCallback?){
+        self.onAudioCallback = onAudioCallback
+        PCMRecorder.shared().setUp(Double(samplateRate))
+    }
     
-    func setUp(preFrameSize:Int) {
+    
+    func setUp(samplateRate:Int,preFrameSize:Int) {
         if(!isRecording){
             self.PRE_FRAME_SIZE = preFrameSize
+            if(self.samplateRate != samplateRate){
+                self.samplateRate = samplateRate
+                PCMRecorder.shared().setUp(Double(samplateRate))
+            }
         }
     }
     
     
-    func setOnAudioCallback(onAudioCallback:OnAudioCallback?){
-        self.onAudioCallback = onAudioCallback
-    }
-    
+ 
     
     
     ///开始录制
-    func start(samplateRate:Double) {
+    func start() {
         if(!isRecording){
             isRecording = true
-            PCMRecorder.shared().start(samplateRate)
-            self.startReadNexPCMDataRunner()
+            //self.startReadNexPCMDataRunner()
+            PCMRecorder.shared().start()
         }
     }
     
@@ -68,6 +74,7 @@ class PCMRecorderClient {
         if(isRecording){
             PCMRecorder.shared().stop()
             isRecording = false
+            resetWhenStop()
         }
     }
     
@@ -77,8 +84,9 @@ class PCMRecorderClient {
     
     
     private func recordAudioCallBack(_ audioData: Data?)->Void {
-        if(audioData != nil){
+        if(audioData != nil && isRecording){
             audioBuffer.append(audioData!)
+            readNextPCMData1()
         }
     }
     
@@ -87,6 +95,26 @@ class PCMRecorderClient {
             self.readNextPCMData()
         }
     }
+    
+    
+    private func readNextPCMData1(){
+        
+        let length = audioBuffer.count
+        var readLength = 0 ;
+        if(length - readPCMDataIndex >= PRE_FRAME_SIZE ){
+            readLength = PRE_FRAME_SIZE;
+        }
+        if(readLength  != 0){
+            let data =  audioBuffer.subdata(in: readPCMDataIndex..<(readPCMDataIndex+readLength))
+            if(self.onAudioCallback != nil){
+                self.onAudioCallback!(data)
+            }
+            readPCMDataIndex += readLength
+            readNextPCMData1()
+        }
+    }
+    
+    
     
     
     private func readNextPCMData(){

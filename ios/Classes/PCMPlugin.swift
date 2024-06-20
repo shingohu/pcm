@@ -44,10 +44,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         
         registrar.addApplicationDelegate(instance)
         
-        PCMRecorderClient.shared.setOnAudioCallback(onAudioCallback: instance.recordAudioCallBack)
+        PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
         PCMPlayerClient.shared.initPlayer()
         instance.registerAudioListener()
-        //instance.initAudioSessionForFast()
+        instance.initAudioSessionForFast()
     }
     
     
@@ -81,16 +81,18 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         
         
         if(method == "initRecorder"){
+            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+            PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize)
             result(true)
         }
         else if(method == "startRecording"){
-            
             haseRecordPermission { allow in
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    PCMRecorderClient.shared.setUp(preFrameSize: preFrameSize)
-                    PCMRecorderClient.shared.start(samplateRate: Double(sampleRateInHz))
+                    PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize)
+                    PCMRecorderClient.shared.start()
                     result(true)
                 }else{
                     result(false)
@@ -100,6 +102,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "stopRecording"){
             PCMRecorderClient.shared.stop()
             result(true)
+        }else if(method == "releaseRecorder"){
+            PCMRecorderClient.shared.stop()
+            result(true)
         }else if(method == "isRecording"){
             result(PCMRecorderClient.shared.isRecording)
         }else if(method == "requestRecordPermission"){
@@ -107,16 +112,21 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "checkRecordPermission"){
             requestRecordPermission(result: result)
         }else if(method == "initPlayer"){
+            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
             result(true)
         }else if(method == "startPlaying"){
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-            PCMPlayerClient.shared.start(samplateRate: Double(sampleRateInHz))
+            PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
             PCMPlayerClient.shared.play(audio: data.data)
             result(true)
         }else if(method == "isPlaying"){
             result(PCMPlayerClient.shared.isPlaying)
         }else if(method == "stopPlaying"){
+            PCMPlayerClient.shared.stop()
+            result(true)
+        }else if(method == "releasePlayer"){
             PCMPlayerClient.shared.stop()
             result(true)
         }else if(method == "unPlayLength"){
@@ -134,7 +144,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             result(true)
         }else if(method == "setPlayAndRecordSession"){
             let defaultToSpeaker:Bool =  (call.arguments as! Dictionary<String, Any>)["defaultToSpeaker"] as! Bool
-            setPlayAndRecordSession(defaultToSpeaker: defaultToSpeaker)
+            self.setPlayAndRecordSession(defaultToSpeaker: defaultToSpeaker)
             result(true)
         }else if(method == "setPlaybackSession"){
             setPlaybackSession()

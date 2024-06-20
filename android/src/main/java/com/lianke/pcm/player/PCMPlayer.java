@@ -10,6 +10,9 @@ import android.media.AudioTrack;
 import android.os.Build;
 import android.os.Process;
 import android.util.Log;
+
+import com.lianke.BuildConfig;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -48,11 +51,12 @@ public class PCMPlayer {
     ///读取缓冲区的下标
     private int readBufferIndex = 0;
     private Thread mAudioPlayingRunner = null;
-    private volatile boolean setToStop = true;
+    private volatile boolean isPlaying = false;
+    private volatile boolean isRelease = true;
 
     ///是否正在播放
     public boolean isPlaying() {
-        return !setToStop;
+        return isPlaying;
     }
 
 
@@ -108,6 +112,7 @@ public class PCMPlayer {
                         AudioTrack.MODE_STREAM
                 );
             }
+            this.isRelease = false;
             this.readBufferIndex = 0;
             this.buffers.clear();
         }
@@ -142,17 +147,6 @@ public class PCMPlayer {
     }
 
 
-    ///重置播放参数
-    private synchronized void release() {
-        if (mPlayer != null) {
-            mPlayer.release();
-            mPlayer = null;
-            readBufferIndex = 0;
-            buffers.clear();
-            Log.e(TAG, "结束播放");
-        }
-    }
-
     private synchronized void stopPlayingRunner() {
         if (mAudioPlayingRunner != null) {
             if (!mAudioPlayingRunner.isInterrupted()) {
@@ -166,13 +160,13 @@ public class PCMPlayer {
         if (mAudioPlayingRunner != null) {
             return;
         }
-        setToStop = false;
+        isPlaying = true;
         mPlayer.play();
-        Log.e(TAG, "开始播放");
+        print(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            while (!setToStop && !Thread.interrupted()) {
+            while (isPlaying && !Thread.interrupted()) {
                 if (buffers.size() > readBufferIndex) {
                     if (mPlayer != null) {
                         byte[] data = buffers.get(readBufferIndex);
@@ -184,7 +178,13 @@ public class PCMPlayer {
                     }
                 }
             }
-            release();
+            if (isRelease) {
+                release();
+            } else {
+                readBufferIndex = 0;
+                buffers.clear();
+                print(TAG, "停止播放");
+            }
         });
         mAudioPlayingRunner.start();
     }
@@ -193,15 +193,29 @@ public class PCMPlayer {
     ///立刻停止播放
     public synchronized void stop() {
         if (mPlayer != null) {
-            if (!setToStop) {
-                setToStop = true;
+            if (isPlaying) {
+                isPlaying = false;
                 stopPlayingRunner();
                 mPlayer.stop();
-            } else {
-                release();
             }
         }
     }
+
+
+    ///销毁播放器
+    public synchronized void release() {
+        this.isRelease = true;
+        if (isPlaying) {
+            stop();
+        } else if (mPlayer != null) {
+            mPlayer.release();
+            mPlayer = null;
+            readBufferIndex = 0;
+            buffers.clear();
+            print(TAG, "销毁播放器");
+        }
+    }
+
 
     public synchronized int unPlayLength() {
         try {
@@ -221,6 +235,12 @@ public class PCMPlayer {
         }
         return 0;
 
+    }
+
+    private static void print(String tag, String msg) {
+        if (BuildConfig.DEBUG) {
+            Log.e(tag, msg);
+        }
     }
 
 }

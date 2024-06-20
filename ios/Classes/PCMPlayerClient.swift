@@ -17,24 +17,39 @@ class PCMPlayerClient {
     }
     
     
-    private var _isPlaying = false;
+    private var _isPlaying = false
     
-
+    
     
     ///音频缓冲
-    private var audioBuffer:Data = Data.init();
+    private var audioBuffer:Data = Data.init()
     
     ///读取的下标
-    private var readPCMDataIndex = 0;
+    private var readPCMDataIndex = 0
+    
+    private var samplateRate:Int = 8000
     
     public func initPlayer(){
         PCMPlayer.shared().audioCallBack = playAudioCallback;
+        setUp(samplateRate: samplateRate)
     }
+    
+    public func setUp(samplateRate:Int){
+        if(!isPlaying){
+            if(self.samplateRate != samplateRate){
+                self.samplateRate = samplateRate
+                PCMPlayer.shared().setUp(Double(samplateRate))
+            }
+        }
+    }
+    
+    
+    
   
-    func start(samplateRate:Double) {
+    func start() {
         if(!isPlaying){
             isPlaying = true
-            PCMPlayer.shared().start(samplateRate)
+            PCMPlayer.shared().start()
         }
     }
     
@@ -49,6 +64,9 @@ class PCMPlayerClient {
     }
     
     func play(audio:Data){
+        if(!self.isPlaying){
+            start()
+        }
         if(self.isPlaying){
             audioBuffer.append(audio)
         }
