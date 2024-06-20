@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
@@ -28,7 +27,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
     print("当前输出变更为->${AudioManager.currentAudioDevice.type}");
     isChangeAudioDevice = true;
     changeAudioDeviceTimer?.cancel();
-    changeAudioDeviceTimer = Timer(Duration(milliseconds: 500), () {
+    changeAudioDeviceTimer = Timer(Duration(milliseconds: 100), () {
       isChangeAudioDevice = false;
     });
   }
@@ -58,6 +57,8 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   @override
   void dispose() {
+    PCMRecorder.release();
+    PCMPlayer.release();
     AudioManager.currentAudioDeviceNotifier
         .removeListener(onCurrentAudioDeviceChanged);
     AudioManager.audioDevicesNotifier.removeListener(onAudioDevicesChanged);
@@ -135,16 +136,25 @@ class _OutputTestPageState extends State<OutputTestPage> {
   Future<void> startRecord() async {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
-      requestAudioFocus();
+      await requestAudioFocus();
+      int start = DateTime.now().millisecondsSinceEpoch;
+      bool first = true;
       PCMRecorder.start(
           preFrameSize: 1024,
-          onData: (audio) {
+          onData: (audio) async {
             if (audio != null) {
-              if (!isChangeAudioDevice) {
-                ///部分手机蓝牙录音的时候需要开启播放才可以收音
-                PCMPlayer.start(audio);
+              if (first) {
+                print(DateTime.now().millisecondsSinceEpoch - start);
+                first = false;
               }
+              start = DateTime.now().millisecondsSinceEpoch;
+              // if (!isChangeAudioDevice) {
+              ///部分手机蓝牙录音的时候需要开启播放才可以收音
+              PCMPlayer.start(audio);
+              //}
             }
+            int length = await PCMPlayer.unPlayLength();
+            print("剩余未播放数据----->" + length.toString());
           });
     } else {
       showToast("没有录音权限");
@@ -153,12 +163,10 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   Future<void> requestAudioFocus() async {
     if (Platform.isAndroid) {
-      AudioManager.requestAudioFocus();
-      AudioManager.setAudioModeInCommunication();
+      await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
-      AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
+      await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
-    PCMPlayer.start(Uint8List(0));
     if (Platform.isAndroid) {
       ///苹果不设置
       setAudioDevice();
@@ -178,15 +186,15 @@ class _OutputTestPageState extends State<OutputTestPage> {
   }
 
   Future<void> abandonAudioFocus() async {
+    AudioManager.abandonAudioFocus();
     if (Platform.isAndroid) {
       AudioManager.setAudioModeNormal();
     }
-    await AudioManager.abandonAudioFocus();
   }
 
   Future<void> stopRecord() async {
     await PCMRecorder.stop();
     await PCMPlayer.stop();
-    abandonAudioFocus();
+    await abandonAudioFocus();
   }
 }

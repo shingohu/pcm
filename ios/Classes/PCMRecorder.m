@@ -19,6 +19,7 @@
     AudioUnit _remoteIOUnit;
     AudioStreamBasicDescription _streamFormat;
     BOOL hasInitReomteIOUnit;
+    double sampleRate;
 }
 
 + (instancetype)shared{
@@ -41,14 +42,17 @@
 
 
 -(void)setUp:(double)sampleRate{
-    [self setupRemoteIOUnit];
-    [self setAudioFormat:sampleRate];
+    self->sampleRate = sampleRate;
 }
 
 
 
 - (void)start{
     if(!self.isRunning){
+        
+        [self setupRemoteIOUnit];
+        [self setAudioFormat:sampleRate];
+        
         //NSLog(@"开始录音%ld",(long)([self getNowDateFormatInteger]));
         //long start = [self getNowDateFormatInteger];
             //启用录音功能(提前设置这个会导致请求录音权限)
@@ -74,6 +78,7 @@
         CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
         self.isRunning = NO;
+        hasInitReomteIOUnit = NO;
         self.audioCallBack(nil);
     }
 }

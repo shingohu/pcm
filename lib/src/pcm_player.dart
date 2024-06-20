@@ -67,6 +67,7 @@ class _InnerPCMPlayer {
         await release();
       }
     }
+    _hasInit = true;
     isPlayingNow = true;
     _sampleRateInHz = sampleRateInHz;
     _voiceCall = voiceCall;

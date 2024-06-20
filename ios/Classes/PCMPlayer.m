@@ -17,6 +17,7 @@
     AudioUnit _remoteIOUnit;
     AudioStreamBasicDescription _streamFormat;
     BOOL hasInitReomteIOUnit;
+    double sampleRate ;
 }
 
 + (instancetype)shared{
@@ -39,13 +40,14 @@
 
 
 - (void)setUp:(double)sampleRate{
-    [self setupRemoteIOUnit];
-    [self setAudioFormat:sampleRate];
+    self->sampleRate = sampleRate;
 }
 
 
 - (void)start{
     if(!self.isRunning){
+        [self setupRemoteIOUnit];
+        [self setAudioFormat:sampleRate];
         CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
         CheckError(AUGraphStart(_graph), "AUGraphStart failed");
         AudioOutputUnitStart(_remoteIOUnit);
@@ -75,6 +77,7 @@
         CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
         CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
+        hasInitReomteIOUnit = NO;
         self.isRunning = NO;
     }
 }

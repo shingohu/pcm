@@ -141,8 +141,8 @@ public class PCMPlayer {
 
     public void play(byte[] pcm) {
         if (mPlayer != null) {
-            buffers.add(pcm);
             startPlayingRunner();
+            buffers.add(pcm);
         }
     }
 
@@ -157,7 +157,7 @@ public class PCMPlayer {
     }
 
     private synchronized void startPlayingRunner() {
-        if (mAudioPlayingRunner != null) {
+        if (mAudioPlayingRunner != null || isPlaying) {
             return;
         }
         isPlaying = true;
