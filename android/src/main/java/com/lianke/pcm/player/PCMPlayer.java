@@ -1,6 +1,7 @@
 package com.lianke.pcm.player;
 
 import static android.media.AudioTrack.PERFORMANCE_MODE_LOW_LATENCY;
+import static android.media.AudioTrack.PLAYSTATE_PLAYING;
 
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
@@ -47,9 +48,11 @@ public class PCMPlayer {
     private volatile AudioTrack mPlayer;
 
 
-    private final ByteArrayOutputStream buffers = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream buffers1 = new ByteArrayOutputStream();
+    private final LinkedList<byte[]> buffers2 = new LinkedList<>();
     ///读取缓冲区的下标
     private int readBufferIndex = 0;
+    private boolean useMethod1 = false;
     private int mBufferSize = 0;
     private Thread mAudioPlayingRunner = null;
     private volatile boolean isPlaying = false;
@@ -112,8 +115,7 @@ public class PCMPlayer {
                 );
             }
             this.isRelease = false;
-            this.readBufferIndex = 0;
-            this.buffers.reset();
+            resetBuffer();
         }
     }
 
@@ -143,7 +145,11 @@ public class PCMPlayer {
             startPlayingRunner();
             try {
                 if (pcm.length != 0) {
-                    buffers.write(pcm);
+                    if (useMethod1) {
+                        buffers1.write(pcm);
+                    } else {
+                        buffers2.add(pcm);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -166,25 +172,45 @@ public class PCMPlayer {
             return;
         }
         isPlaying = true;
+        if (mPlayer.getPlayState() != PLAYSTATE_PLAYING) {
+            mPlayer.play();
+        }
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
-            mPlayer.play();
-            print(TAG, "开始播放");
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            int readLength = mBufferSize;
-            while (isPlaying && !Thread.interrupted()) {
-                if (buffers.size() >= readBufferIndex + readLength) {
-                    if (mPlayer != null) {
-                        int length = mPlayer.write(subByte(buffers.toByteArray(), readBufferIndex, readLength), 0, readLength, AudioTrack.WRITE_NON_BLOCKING);
+            if (useMethod1) {
+                int readLength = mBufferSize;
+                while (isPlaying && !Thread.interrupted()) {
+                    int size = buffers1.size();
+                    byte[] data = new byte[0];
+                    if (size - readBufferIndex >= readLength) {
+                        data = subByte(buffers1.toByteArray(), readBufferIndex, readLength);
+                    } else if (size - readBufferIndex > 0) {
+                        data = subByte(buffers1.toByteArray(), readBufferIndex, size - readBufferIndex);
+                    }
+                    if (mPlayer != null && data.length > 0) {
+                        int length = mPlayer.write(data, 0, data.length, AudioTrack.WRITE_NON_BLOCKING);
                         readBufferIndex += length;
+                    }
+                }
+            } else {
+                while (isPlaying && !Thread.interrupted()) {
+                    if (buffers2.size() > readBufferIndex) {
+                        if (mPlayer != null) {
+                            byte[] data = buffers2.get(readBufferIndex);
+                            if (data != null) {
+                                int readLength = data.length;
+                                int length = mPlayer.write(data, 0, readLength, AudioTrack.WRITE_BLOCKING);
+                            }
+                            readBufferIndex++;
+                        }
                     }
                 }
             }
             if (isRelease) {
                 release();
             } else {
-                buffers.reset();
-                readBufferIndex = 0;
+                resetBuffer();
                 print(TAG, "停止播放");
             }
         });
@@ -206,7 +232,7 @@ public class PCMPlayer {
                 stopPlayingRunner();
                 mPlayer.pause();
                 mPlayer.flush();
-                mPlayer.stop();
+                // mPlayer.stop();
             }
         }
     }
@@ -220,19 +246,44 @@ public class PCMPlayer {
         } else if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
-            buffers.reset();
-            readBufferIndex = 0;
+            resetBuffer();
             print(TAG, "销毁播放器");
         }
     }
 
-    public synchronized int unPlayLength() {
-        int size = buffers.size() - readBufferIndex;
-        if (size < 0) {
-            size = 0;
+    private void resetBuffer() {
+        buffers1.reset();
+        buffers2.clear();
+        readBufferIndex = 0;
+        if (mPlayer != null) {
+            mPlayer.play();
         }
-        return size;
     }
+
+    public synchronized int unPlayLength() {
+        if (useMethod1) {
+            int size = buffers1.size() - readBufferIndex;
+            return Math.max(size, 0);
+        } else {
+            try {
+                int size = buffers2.size();
+                int index = readBufferIndex;
+                int i = size - index;
+                if (i > 0) {
+                    int count = 0;
+                    List<byte[]> datas = buffers2.subList(index, size);
+                    for (int k = 0; k < datas.size(); k++) {
+                        count += datas.get(k).length;
+                    }
+                    return count;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return 0;
+        }
+    }
+
 
     private static void print(String tag, String msg) {
         if (BuildConfig.DEBUG) {

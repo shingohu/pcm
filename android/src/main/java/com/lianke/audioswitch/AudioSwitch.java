@@ -124,6 +124,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     };
 
     public void enumerateDevices() {
+        mHandler.removeCallbacks(updateAudioDevicesRunner);
         loadAvailableAudioDevices();
         notifyCurrentAudioDeviceChanged();
         notifyAvailableAudioDevicesChanged();
