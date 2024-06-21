@@ -13,6 +13,8 @@ import android.util.Log;
 
 import com.lianke.BuildConfig;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -45,11 +47,10 @@ public class PCMPlayer {
     private volatile AudioTrack mPlayer;
 
 
-    ///音频数据缓冲区,这里不能用ArrayList
-    private final List<byte[]> buffers = new LinkedList<>();
-
+    private final ByteArrayOutputStream buffers = new ByteArrayOutputStream();
     ///读取缓冲区的下标
     private int readBufferIndex = 0;
+    private int mBufferSize = 0;
     private Thread mAudioPlayingRunner = null;
     private volatile boolean isPlaying = false;
     private volatile boolean isRelease = true;
@@ -66,10 +67,8 @@ public class PCMPlayer {
 
     public void init(int sampleRateInHz, boolean voiceCall) {
         if (mPlayer == null) {
-            int mBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
+            mBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT));
-
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     mPlayer = new AudioTrack.Builder()
@@ -114,7 +113,7 @@ public class PCMPlayer {
             }
             this.isRelease = false;
             this.readBufferIndex = 0;
-            this.buffers.clear();
+            this.buffers.reset();
         }
     }
 
@@ -142,7 +141,13 @@ public class PCMPlayer {
     public void play(byte[] pcm) {
         if (mPlayer != null) {
             startPlayingRunner();
-            buffers.add(pcm);
+            try {
+                if (pcm.length != 0) {
+                    buffers.write(pcm);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -161,32 +166,35 @@ public class PCMPlayer {
             return;
         }
         isPlaying = true;
-        mPlayer.play();
-        print(TAG, "开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
+            mPlayer.play();
+            print(TAG, "开始播放");
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+            int readLength = mBufferSize;
             while (isPlaying && !Thread.interrupted()) {
-                if (buffers.size() > readBufferIndex) {
+                if (buffers.size() >= readBufferIndex + readLength) {
                     if (mPlayer != null) {
-                        byte[] data = buffers.get(readBufferIndex);
-                        if (data != null) {
-                            int length = data.length;
-                            mPlayer.write(data, 0, length);
-                        }
-                        readBufferIndex++;
+                        int length = mPlayer.write(subByte(buffers.toByteArray(), readBufferIndex, readLength), 0, readLength, AudioTrack.WRITE_NON_BLOCKING);
+                        readBufferIndex += length;
                     }
                 }
             }
             if (isRelease) {
                 release();
             } else {
+                buffers.reset();
                 readBufferIndex = 0;
-                buffers.clear();
                 print(TAG, "停止播放");
             }
         });
         mAudioPlayingRunner.start();
+    }
+
+    private byte[] subByte(byte[] src, int off, int length) {
+        byte[] b = new byte[length];
+        System.arraycopy(src, off, b, 0, length);
+        return b;
     }
 
 
@@ -196,6 +204,8 @@ public class PCMPlayer {
             if (isPlaying) {
                 isPlaying = false;
                 stopPlayingRunner();
+                mPlayer.pause();
+                mPlayer.flush();
                 mPlayer.stop();
             }
         }
@@ -210,31 +220,18 @@ public class PCMPlayer {
         } else if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
+            buffers.reset();
             readBufferIndex = 0;
-            buffers.clear();
             print(TAG, "销毁播放器");
         }
     }
 
-
     public synchronized int unPlayLength() {
-        try {
-            int size = buffers.size();
-            int index = readBufferIndex;
-            int i = size - index;
-            if (i > 0) {
-                int count = 0;
-                List<byte[]> datas = buffers.subList(index, size);
-                for (int k = 0; k < datas.size(); k++) {
-                    count += datas.get(k).length;
-                }
-                return count;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        int size = buffers.size() - readBufferIndex;
+        if (size < 0) {
+            size = 0;
         }
-        return 0;
-
+        return size;
     }
 
     private static void print(String tag, String msg) {

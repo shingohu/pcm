@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
@@ -168,6 +169,8 @@ class _OutputTestPageState extends State<OutputTestPage> {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
     if (Platform.isAndroid) {
+      PCMPlayer.start(Uint8List(0));
+
       ///苹果不设置
       setAudioDevice();
     }

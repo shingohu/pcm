@@ -260,9 +260,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             startBluetoothSco();
             return;
         } else if (index == AudioDeviceType.BLUETOOTHA2DP.ordinal() && isBluetoothA2dpOn()) {
+            openSpeaker(false);
             setBluetoothA2dpOn();
             stopBluetoothSco();
-            openSpeaker(false);
         } else if (index == AudioDeviceType.WIREDHEADSET.ordinal() && isWiredHeadsetOn()) {
             setWiredHeadsetOn();
             openSpeaker(false);
@@ -276,7 +276,8 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         notifyCurrentAudioDeviceChanged();
     }
 
-    ///设置音频输出到蓝牙
+    ///设置音频输出到蓝牙 (这里播放器必须初始化了才可以)
+    ///为什么不能用setCommunicationDevice 会报错
     private void setBluetoothA2dpOn() {
         AudioDeviceInfo[] devices = audioManager.getDevices(
                 GET_DEVICES_OUTPUTS);
