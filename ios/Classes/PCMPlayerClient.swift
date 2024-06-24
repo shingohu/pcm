@@ -68,7 +68,9 @@ class PCMPlayerClient {
             start()
         }
         if(self.isPlaying){
-            audioBuffer.append(audio)
+            if(audio.count > 0){
+                audioBuffer.append(audio)
+            }
         }
     }
     
@@ -100,10 +102,6 @@ class PCMPlayerClient {
             let data =  audioBuffer.subdata(in: readPCMDataIndex..<(readPCMDataIndex+readLength))
             readPCMDataIndex += readLength
             return data
-        }else{
-            ///没有就填充0(静音数据)
-            ///带耳机会出现一卡一卡的
-           // return Data(count: readLength)
         }
         return nil;
     }

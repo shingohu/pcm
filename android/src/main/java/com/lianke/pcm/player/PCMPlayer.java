@@ -144,7 +144,7 @@ public class PCMPlayer {
         if (mPlayer != null) {
             startPlayingRunner();
             try {
-                if (pcm.length != 0) {
+                if (pcm != null && pcm.length != 0) {
                     if (useMethod1) {
                         buffers1.write(pcm);
                     } else {
@@ -178,6 +178,7 @@ public class PCMPlayer {
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+            print(TAG, "开始播放");
             if (useMethod1) {
                 int readLength = mBufferSize;
                 while (isPlaying && !Thread.interrupted()) {
@@ -185,8 +186,6 @@ public class PCMPlayer {
                     byte[] data = new byte[0];
                     if (size - readBufferIndex >= readLength) {
                         data = subByte(buffers1.toByteArray(), readBufferIndex, readLength);
-                    } else if (size - readBufferIndex > 0) {
-                        data = subByte(buffers1.toByteArray(), readBufferIndex, size - readBufferIndex);
                     }
                     if (mPlayer != null && data.length > 0) {
                         int length = mPlayer.write(data, 0, data.length, AudioTrack.WRITE_NON_BLOCKING);
