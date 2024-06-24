@@ -33,10 +33,9 @@ class _InnerPCMRecorder {
   bool get hasInit => _hasInit;
 
   ///提前初始化录音机
-  Future<void> init(
-      {int sampleRateInHz = 8000,
-      int preFrameSize = 320,
-      AudioSource audioSource = AudioSource.VOICE_COMMUNICATION}) async {
+  Future<void> init({int sampleRateInHz = 8000,
+    int preFrameSize = 320,
+    AudioSource audioSource = AudioSource.VOICE_COMMUNICATION}) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
@@ -73,11 +72,10 @@ class _InnerPCMRecorder {
    * [audioSource]音源选择(android有用)
    * [onData] 音频数据回调
    */
-  Future<bool> start(
-      {int sampleRateInHz = 8000,
-      int preFrameSize = 320,
-      AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
-      Function(Uint8List?)? onData}) async {
+  Future<bool> start({int sampleRateInHz = 8000,
+    int preFrameSize = 320,
+    AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
+    Function(Uint8List?)? onData}) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return false;
     }
@@ -117,6 +115,9 @@ class _InnerPCMRecorder {
   }
 
   _InnerPCMRecorder._() {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
+    }
     _pcmStream = _streamChannel
         .receiveBroadcastStream()
         .map((buffer) => buffer as Uint8List?);
