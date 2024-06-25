@@ -59,7 +59,7 @@ AudioDeviceType _getAudioDeviceTypeByString(String type) {
 class _AudioManager {
   ///android sco 状态变更
   ValueNotifier<BluetoothScoState> bluetoothScoStateNotifier =
-      ValueNotifier(BluetoothScoState.DISCONNECTED);
+  ValueNotifier(BluetoothScoState.DISCONNECTED);
 
   ///android sco 状态
   BluetoothScoState get bluetoothScoState => bluetoothScoStateNotifier.value;
@@ -128,7 +128,9 @@ class _AudioManager {
     return null;
   }
 
-  _AudioManager._() {}
+  _AudioManager._() {
+    initialize();
+  }
 
   bool _hasInit = false;
 
@@ -245,7 +247,7 @@ class _AudioManager {
   ///获取有效的音频输出设备
   Future<List<AudioDevice>> _getAvailableAudioDevices() async {
     List<dynamic> result =
-        await _channel.invokeMethod("getAvailableAudioDevices");
+    await _channel.invokeMethod("getAvailableAudioDevices");
     List<AudioDevice> devices = result.map((e) {
       return AudioDevice(
           name: e["name"]!, type: _getAudioDeviceTypeByString(e["type"]!));
@@ -266,15 +268,15 @@ class _AudioManager {
   void _notifyAvailableAudioDevicesChanged(List<AudioDevice> devices) {
     String devicesToString = devices
         .map((e) {
-          return {"name": e.name, "type": e.type.name};
-        })
+      return {"name": e.name, "type": e.type.name};
+    })
         .toList()
         .toString();
     if (devicesToString ==
         audioDevices
             .map((e) {
-              return {"name": e.name, "type": e.type.name};
-            })
+          return {"name": e.name, "type": e.type.name};
+        })
             .toList()
             .toString()) {
       return;
@@ -285,7 +287,7 @@ class _AudioManager {
   ///获取当前音频输出设备
   Future<AudioDevice> _getCurrentAudioDevice() async {
     Map<dynamic, dynamic> device =
-        await _channel.invokeMethod("getCurrentAudioDevice");
+    await _channel.invokeMethod("getCurrentAudioDevice");
     AudioDevice audioDevice = AudioDevice(
         name: device["name"]!,
         type: _getAudioDeviceTypeByString(device["type"]!));
