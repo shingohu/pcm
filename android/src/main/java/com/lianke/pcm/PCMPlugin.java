@@ -83,6 +83,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         String method = call.method;
 
         if ("initRecorder".equals(method)) {
+            if (!checkRecordPermission(applicationContext)) {
+                result.success(false);
+                return;
+            }
             int sampleRateInHz = call.argument("sampleRateInHz");
             int preFrameSize = call.argument("preFrameSize");
             int audioSource = call.argument("audioSource");
