@@ -54,15 +54,17 @@ class _InnerPCMRecorder {
         return;
       }
     }
-    _hasInit = true;
-    this._sampleRateInHz = sampleRateInHz;
-    this._preFrameSize = preFrameSize;
-    this._audioSource = audioSource;
-    await _channel.invokeMethod("initRecorder", {
+    bool success = await _channel.invokeMethod("initRecorder", {
       "sampleRateInHz": sampleRateInHz,
       "preFrameSize": preFrameSize,
       "audioSource": audioSource.value,
     });
+    if (success) {
+      _hasInit = true;
+      this._sampleRateInHz = sampleRateInHz;
+      this._preFrameSize = preFrameSize;
+      this._audioSource = audioSource;
+    }
   }
 
   /**
@@ -92,10 +94,6 @@ class _InnerPCMRecorder {
         return true;
       }
     }
-
-    this._sampleRateInHz = sampleRateInHz;
-    this._preFrameSize = preFrameSize;
-    this._audioSource = audioSource;
     this.isRecordingNow = true;
     bool success = await _channel.invokeMethod("startRecording", {
       "sampleRateInHz": sampleRateInHz,
@@ -107,6 +105,9 @@ class _InnerPCMRecorder {
       _stopCompleter = null;
     } else {
       _hasInit = true;
+      this._sampleRateInHz = sampleRateInHz;
+      this._preFrameSize = preFrameSize;
+      this._audioSource = audioSource;
       if (_stopCompleter == null) {
         _stopCompleter = Completer();
       }
