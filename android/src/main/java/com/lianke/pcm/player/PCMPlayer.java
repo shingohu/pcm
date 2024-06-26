@@ -231,7 +231,7 @@ public class PCMPlayer {
                 stopPlayingRunner();
                 mPlayer.pause();
                 mPlayer.flush();
-                // mPlayer.stop();
+                mPlayer.stop();
             }
         }
     }
@@ -255,7 +255,7 @@ public class PCMPlayer {
         buffers2.clear();
         readBufferIndex = 0;
         if (mPlayer != null) {
-            mPlayer.play();
+            //mPlayer.play();
         }
     }
 

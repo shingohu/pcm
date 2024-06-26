@@ -556,6 +556,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         return audioManager.isSpeakerphoneOn();
     }
 
+    AudioFocusRequest audioFocusRequest;
 
     ///释放音频焦点,录音结束的时候释放音频焦点
     final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
@@ -568,7 +569,12 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     ///请求音频焦点,停止音乐播放器,录音的时候临时占用音频焦点
     public void requestAudioFocus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            audioManager.requestAudioFocus(new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).build());
+            if (audioFocusRequest == null) {
+                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                        .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                        .build();
+            }
+            audioManager.requestAudioFocus(audioFocusRequest);
         } else {
             audioManager.requestAudioFocus(audioFocusChangeListener, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
         }
@@ -576,7 +582,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     public void abandonAudioFocus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            audioManager.abandonAudioFocusRequest(new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).build());
+            int result = audioManager.abandonAudioFocusRequest(audioFocusRequest);
         } else {
             audioManager.abandonAudioFocus(audioFocusChangeListener);
         }
