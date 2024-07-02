@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
+import 'package:webrtc_ns/webrtc_ns.dart';
 
 class OutputTestPage extends StatefulWidget {
   const OutputTestPage({super.key});
@@ -14,6 +15,13 @@ class OutputTestPage extends StatefulWidget {
 }
 
 class _OutputTestPageState extends State<OutputTestPage> {
+  ///是否开启降噪
+  bool get openNS => _openNS;
+  bool _openNS = false;
+
+  ///可以在使用MIC录音并带耳机(有线)的情况下,感受降噪和不降噪的区别
+  AudioSource get audioSource => AudioSource.MIC;
+
   @override
   void initState() {
     AudioManager.currentAudioDeviceNotifier
@@ -58,6 +66,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   @override
   void dispose() {
+    WebrtcNS.destroy();
     PCMRecorder.release();
     PCMPlayer.release();
     AudioManager.currentAudioDeviceNotifier
@@ -128,6 +137,12 @@ class _OutputTestPageState extends State<OutputTestPage> {
                   }
                 },
                 child: Text("输出到蓝牙HFP")),
+            TextButton(
+                onPressed: () {
+                  _openNS = !_openNS;
+                  setState(() {});
+                },
+                child: Text(openNS ? "关闭降噪" : "打开降噪")),
           ],
         ),
       ),
@@ -138,24 +153,23 @@ class _OutputTestPageState extends State<OutputTestPage> {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
       await requestAudioFocus();
-      int start = DateTime.now().millisecondsSinceEpoch;
-      bool first = true;
+      WebrtcNS.init(8000, NSLevel.VeryHigh);
       PCMRecorder.start(
-          preFrameSize: 1024,
+          preFrameSize: 960,
+          audioSource: audioSource,
           onData: (audio) async {
             if (audio != null) {
-              if (first) {
-                print(DateTime.now().millisecondsSinceEpoch - start);
-                first = false;
-              }
-              start = DateTime.now().millisecondsSinceEpoch;
               // if (!isChangeAudioDevice) {
               ///部分手机蓝牙录音的时候需要开启播放才可以收音
-              PCMPlayer.start(audio);
+              if (openNS) {
+                PCMPlayer.start(WebrtcNS.process(audio),
+                    voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
+              } else {
+                PCMPlayer.start(audio,
+                    voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
+              }
               //}
             }
-            int length = await PCMPlayer.unPlayLength();
-            print("剩余未播放数据----->" + length.toString());
           });
     } else {
       showToast("没有录音权限");
@@ -163,13 +177,14 @@ class _OutputTestPageState extends State<OutputTestPage> {
   }
 
   Future<void> requestAudioFocus() async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid && audioSource == AudioSource.VOICE_COMMUNICATION) {
       await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
     if (Platform.isAndroid) {
-      PCMPlayer.start(Uint8List(0));
+      PCMPlayer.start(Uint8List(0),
+          voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
 
       ///苹果不设置
       setAudioDevice();
@@ -179,7 +194,8 @@ class _OutputTestPageState extends State<OutputTestPage> {
   Future<void> setAudioDevice() async {
     if (AudioManager.isWiredHeadsetOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
-    } else if (AudioManager.isBluetoothHeadsetOn) {
+    } else if (AudioManager.isBluetoothHeadsetOn &&
+        audioSource == AudioSource.VOICE_COMMUNICATION) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHHEADSET);
     } else if (AudioManager.isBluetoothA2dpOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHA2DP);
@@ -199,5 +215,6 @@ class _OutputTestPageState extends State<OutputTestPage> {
     await PCMRecorder.stop();
     await PCMPlayer.stop();
     await abandonAudioFocus();
+    WebrtcNS.destroy();
   }
 }

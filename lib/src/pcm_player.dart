@@ -102,7 +102,7 @@ class _InnerPCMPlayer {
     }
     _hasInit = false;
     if (isPlayingNow) {
-      await stop;
+      await stop();
     }
     await _channel.invokeMethod("releasePlayer");
     this._sampleRateInHz = null;
