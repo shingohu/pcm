@@ -20,7 +20,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
   bool _openNS = false;
 
   ///可以在使用MIC录音并带耳机(有线)的情况下,感受降噪和不降噪的区别
-  AudioSource get audioSource => AudioSource.MIC;
+  AudioSource get audioSource => AudioSource.VOICE_COMMUNICATION;
 
   @override
   void initState() {
@@ -36,7 +36,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
     print("当前输出变更为->${AudioManager.currentAudioDevice.type}");
     isChangeAudioDevice = true;
     changeAudioDeviceTimer?.cancel();
-    changeAudioDeviceTimer = Timer(Duration(milliseconds: 100), () {
+    changeAudioDeviceTimer = Timer(Duration(milliseconds: 200), () {
       isChangeAudioDevice = false;
     });
   }
@@ -60,7 +60,18 @@ class _OutputTestPageState extends State<OutputTestPage> {
   void onBluetoothSCOStateChanged() {
     if (PCMPlayer.isPlayingNow) {
       if (AudioManager.bluetoothScoState == BluetoothScoState.DISCONNECTED ||
-          AudioManager.bluetoothScoState == BluetoothScoState.ERROR) {}
+          AudioManager.bluetoothScoState == BluetoothScoState.ERROR) {
+        if (AudioManager.currentAudioDevice.type ==
+            AudioDeviceType.BLUETOOTHHEADSET) {
+          if (AudioManager.isWiredHeadsetOn) {
+            AudioManager.setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
+          } else if (AudioManager.isBluetoothA2dpOn) {
+            AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHA2DP);
+          } else {
+            AudioManager.setCurrentAudioDevice(AudioDeviceType.SPEAKER);
+          }
+        }
+      }
     }
   }
 
@@ -177,8 +188,8 @@ class _OutputTestPageState extends State<OutputTestPage> {
   }
 
   Future<void> requestAudioFocus() async {
-    if (Platform.isAndroid && audioSource == AudioSource.VOICE_COMMUNICATION) {
-      await AudioManager.setAudioModeInCommunication();
+    if (Platform.isAndroid) {
+      //  await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
@@ -194,8 +205,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
   Future<void> setAudioDevice() async {
     if (AudioManager.isWiredHeadsetOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.WIREDHEADSET);
-    } else if (AudioManager.isBluetoothHeadsetOn &&
-        audioSource == AudioSource.VOICE_COMMUNICATION) {
+    } else if (AudioManager.isBluetoothHeadsetOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHHEADSET);
     } else if (AudioManager.isBluetoothA2dpOn) {
       AudioManager.setCurrentAudioDevice(AudioDeviceType.BLUETOOTHA2DP);
