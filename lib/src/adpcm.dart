@@ -188,7 +188,7 @@ class ADPCM2PCM {
   ///当编解码结束后必须重置
   void stop() {
     _g_devalpred = 0;
-    _g_devalpred = 0;
+    _g_deindex = 0;
   }
 }
 
