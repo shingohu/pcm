@@ -582,7 +582,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     public void abandonAudioFocus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int result = audioManager.abandonAudioFocusRequest(audioFocusRequest);
+            if (audioFocusRequest != null) {
+                int result = audioManager.abandonAudioFocusRequest(audioFocusRequest);
+            }
         } else {
             audioManager.abandonAudioFocus(audioFocusChangeListener);
         }

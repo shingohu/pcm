@@ -13,6 +13,7 @@ import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 
 import com.lianke.audioswitch.AudioSwitch;
@@ -275,8 +276,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
 
     public boolean checkRecordPermission(Context context) {
-        boolean has = PermissionChecker.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PermissionChecker.PERMISSION_GRANTED;
-        return has;
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PermissionChecker.PERMISSION_GRANTED;
     }
 
     public void requestRecordPermission(Result result) {

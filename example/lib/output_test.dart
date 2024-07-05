@@ -189,7 +189,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   Future<void> requestAudioFocus() async {
     if (Platform.isAndroid) {
-      //  await AudioManager.setAudioModeInCommunication();
+      //await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
