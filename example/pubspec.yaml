@@ -25,7 +25,13 @@ dependencies:
   flutter_to_airplay: ^2.0.4
   flutter_volume_controller: ^1.3.2
   webrtc_ns:
-    git: "https://github.com/shingohu/webrtc_ns"
+    git:
+      url: "https://github.com/shingohu/webrtc_ns"
+      ref: '0.0.1'
+  webrtc_agc:
+    git:
+      url: "https://github.com/shingohu/webrtc_agc"
+      ref: '0.0.1'
   pcm:
     # When depending on this package from a real application you should use:
     #   pcm: ^x.y.z

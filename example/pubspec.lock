@@ -186,12 +186,21 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.4"
+  webrtc_agc:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: "0.0.1"
+      resolved-ref: "58bf9ed22dafeadbc6e5577708b3d7ac15d36de0"
+      url: "https://github.com/shingohu/webrtc_agc"
+    source: git
+    version: "0.0.1"
   webrtc_ns:
     dependency: "direct main"
     description:
       path: "."
-      ref: HEAD
-      resolved-ref: e090b645205fed89b9560d58abde68bf9ad6ec06
+      ref: "0.0.1"
+      resolved-ref: c71516a06a3e49014740ee289bb6e3dda6d584bf
       url: "https://github.com/shingohu/webrtc_ns"
     source: git
     version: "0.0.1"

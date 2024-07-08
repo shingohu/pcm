@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
-import 'package:pcm_example/output_test.dart';
+import 'package:pcm_example/audio_output_demo.dart';
+
+import 'webrtc_agc_demo.dart';
+import 'webrtc_ns_demo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +29,44 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return OKToast(
       child: MaterialApp(
-        home: OutputTestPage(),
+        home: Builder(builder: (context) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: SingleChildScrollView(
+              child: Container(
+                width: double.infinity,
+                child: Column(
+                  children: [
+                    TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (ctx) {
+                            return AudioOutputDemoPage();
+                          }));
+                        },
+                        child: Text("音频输出设备测试")),
+                    TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (ctx) {
+                            return WebrtcNSDemoPage();
+                          }));
+                        },
+                        child: Text("降噪测试")),
+                    TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (ctx) {
+                            return WebrtcAGCDemoPage();
+                          }));
+                        },
+                        child: Text("自动增益测试")),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

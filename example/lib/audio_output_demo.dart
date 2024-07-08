@@ -5,21 +5,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
-import 'package:webrtc_ns/webrtc_ns.dart';
 
-class OutputTestPage extends StatefulWidget {
-  const OutputTestPage({super.key});
+///音频输出设备demo
+class AudioOutputDemoPage extends StatefulWidget {
+  const AudioOutputDemoPage({super.key});
 
   @override
-  State<OutputTestPage> createState() => _OutputTestPageState();
+  State<AudioOutputDemoPage> createState() => _AudioOutputDemoPageState();
 }
 
-class _OutputTestPageState extends State<OutputTestPage> {
-  ///是否开启降噪
-  bool get openNS => _openNS;
-  bool _openNS = false;
-
-  ///可以在使用MIC录音并带耳机(有线)的情况下,感受降噪和不降噪的区别
+class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
   AudioSource get audioSource => AudioSource.VOICE_COMMUNICATION;
 
   @override
@@ -77,7 +72,6 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   @override
   void dispose() {
-    WebrtcNS.destroy();
     PCMRecorder.release();
     PCMPlayer.release();
     AudioManager.currentAudioDeviceNotifier
@@ -92,7 +86,7 @@ class _OutputTestPageState extends State<OutputTestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("输出测试"),
+        title: Text("音频输出设备测试"),
       ),
       body: Center(
         child: Column(
@@ -148,12 +142,6 @@ class _OutputTestPageState extends State<OutputTestPage> {
                   }
                 },
                 child: Text("输出到蓝牙HFP")),
-            TextButton(
-                onPressed: () {
-                  _openNS = !_openNS;
-                  setState(() {});
-                },
-                child: Text(openNS ? "关闭降噪" : "打开降噪")),
           ],
         ),
       ),
@@ -164,22 +152,13 @@ class _OutputTestPageState extends State<OutputTestPage> {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
       await requestAudioFocus();
-      WebrtcNS.init(8000, NSLevel.VeryHigh);
       PCMRecorder.start(
           preFrameSize: 960,
           audioSource: audioSource,
           onData: (audio) async {
             if (audio != null) {
-              // if (!isChangeAudioDevice) {
-              ///部分手机蓝牙录音的时候需要开启播放才可以收音
-              if (openNS) {
-                PCMPlayer.start(WebrtcNS.process(audio),
-                    voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
-              } else {
-                PCMPlayer.start(audio,
-                    voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
-              }
-              //}
+              PCMPlayer.start(audio,
+                  voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
             }
           });
     } else {
@@ -189,7 +168,6 @@ class _OutputTestPageState extends State<OutputTestPage> {
 
   Future<void> requestAudioFocus() async {
     if (Platform.isAndroid) {
-      //await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
@@ -225,6 +203,5 @@ class _OutputTestPageState extends State<OutputTestPage> {
     await PCMRecorder.stop();
     await PCMPlayer.stop();
     await abandonAudioFocus();
-    WebrtcNS.destroy();
   }
 }
