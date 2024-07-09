@@ -178,7 +178,6 @@ public class PCMPlayer {
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            print(TAG, "开始播放");
             if (useMethod1) {
                 int readLength = mBufferSize;
                 while (isPlaying && !Thread.interrupted()) {
@@ -210,7 +209,6 @@ public class PCMPlayer {
                 release();
             } else {
                 resetBuffer();
-                print(TAG, "停止播放");
             }
         });
         mAudioPlayingRunner.start();
@@ -246,7 +244,6 @@ public class PCMPlayer {
             mPlayer.release();
             mPlayer = null;
             resetBuffer();
-            print(TAG, "销毁播放器");
         }
     }
 
@@ -254,9 +251,6 @@ public class PCMPlayer {
         buffers1.reset();
         buffers2.clear();
         readBufferIndex = 0;
-        if (mPlayer != null) {
-            //mPlayer.play();
-        }
     }
 
     public synchronized int unPlayLength() {

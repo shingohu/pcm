@@ -81,7 +81,6 @@ public class PCMRecorder {
                         bufferSize);
             }
             isRelease = false;
-            print(TAG, "初始化录音器");
             if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
                 int audioSessionId = mAudioRecord.getAudioSessionId();
                 enableAEC(audioSessionId);
@@ -109,13 +108,12 @@ public class PCMRecorder {
                 isRecording = true;
                 mAudioRecord.startRecording();
                 startRecordingRunner();
-                print(TAG, "开始录音");
             } else {
-                print(TAG, "启动录音失败");
+                Log.e(TAG, "启动录音失败");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            print(TAG, "启动录音失败");
+            Log.e(TAG, "启动录音失败");
             release();
         }
         return isRecording;
@@ -130,11 +128,13 @@ public class PCMRecorder {
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
                 byte[] pcmBuffer = new byte[PRE_READ_LENGTH];
                 while (isRecording && !Thread.interrupted()) {
-                    int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
-                    if (readSize > 0) {
-                        if (readSize >= PRE_READ_LENGTH) {
-                            if (recordListener != null) {
-                                recordListener.onAudioProcess(pcmBuffer);
+                    if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+                        int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
+                        if (readSize > 0) {
+                            if (readSize >= PRE_READ_LENGTH) {
+                                if (recordListener != null) {
+                                    recordListener.onAudioProcess(pcmBuffer);
+                                }
                             }
                         }
                     }
@@ -144,10 +144,7 @@ public class PCMRecorder {
                 }
                 if (isRelease) {
                     release();
-                } else {
-                    print(TAG, "结束录音");
                 }
-
             }
         };
         mAudioHandleRunner.start();
@@ -179,7 +176,6 @@ public class PCMRecorder {
         } else if (mAudioRecord != null) {
             mAudioRecord.release();
             mAudioRecord = null;
-            print(TAG, "销毁录音机");
         }
     }
 
@@ -192,7 +188,6 @@ public class PCMRecorder {
             if (acousticEchoCanceler != null) {
                 int resultCode = acousticEchoCanceler.setEnabled(true);
                 if (AudioEffect.SUCCESS == resultCode) {
-                    print(TAG, "---回声消除使能成功--");
                 }
             }
         }
@@ -209,7 +204,6 @@ public class PCMRecorder {
             if (noiseSuppressor != null) {
                 int resultCode = noiseSuppressor.setEnabled(true);
                 if (AudioEffect.SUCCESS == resultCode) {
-                    print(TAG, "---降噪使能成功--");
                 }
             }
         }
@@ -226,15 +220,8 @@ public class PCMRecorder {
             if (agc != null) {
                 int resultCode = agc.setEnabled(true);
                 if (AudioEffect.SUCCESS == resultCode) {
-                    print(TAG, "---自动增益使能成功--");
                 }
             }
-        }
-    }
-
-    private static void print(String tag, String msg) {
-        if (BuildConfig.DEBUG) {
-            Log.e(tag, msg);
         }
     }
 }
