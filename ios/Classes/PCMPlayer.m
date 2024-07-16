@@ -47,13 +47,18 @@
 
 - (void)start{
     if(!self.isRunning){
+        NSLog(@"开始播放");
+        //long start = [self getNowDateFormatInteger];
         [self setupRemoteIOUnit];
         [self setAudioFormat:sampleRate];
-        CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
-        CheckError(AUGraphStart(_graph), "AUGraphStart failed");
+//        CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
+//        CheckError(AUGraphStart(_graph), "AUGraphStart failed");
         AudioOutputUnitStart(_remoteIOUnit);
         self.isRunning = YES;
-      //  NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        
+        //NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        
+       
     }
 }
 
@@ -75,11 +80,12 @@
 
 - (void)stop{
     if(self.isRunning){
-        CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
-        CheckError(AUGraphStop(_graph), "AUGraphStop failed");
+//        CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
+//        CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
-        hasInitReomteIOUnit = NO;
         self.isRunning = NO;
+        hasInitReomteIOUnit = NO;
+        NSLog(@"结束播放");
     }
 }
 
@@ -90,8 +96,8 @@
     }
     hasInitReomteIOUnit = YES;
     //Create graph
-    CheckError(NewAUGraph(&_graph),
-               "NewAUGraph failed");
+//    CheckError(NewAUGraph(&_graph),
+//               "NewAUGraph failed");
     
     //Create nodes and add to the graph
     AudioComponentDescription inputcd = {0};
@@ -100,25 +106,31 @@
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;
-    AUNode remoteIONode;
-    //Add node to the graph
-    CheckError(AUGraphAddNode(_graph,
-                              &inputcd,
-                              &remoteIONode),
-               "AUGraphAddNode failed");
+//    AUNode remoteIONode;
+//    //Add node to the graph
+//    CheckError(AUGraphAddNode(_graph,
+//                              &inputcd,
+//                              &remoteIONode),
+//               "AUGraphAddNode failed");
+//    
+//    //Open the graph
+//    CheckError(AUGraphOpen(_graph),
+//               "AUGraphOpen failed");
+//    
+//    //Get reference to the node
+//    CheckError(AUGraphNodeInfo(_graph,
+//                               remoteIONode,
+//                               &inputcd,
+//                               &_remoteIOUnit),
+//               "AUGraphNodeInfo failed");
     
-    //Open the graph
-    CheckError(AUGraphOpen(_graph),
-               "AUGraphOpen failed");
-    
-    //Get reference to the node
-    CheckError(AUGraphNodeInfo(_graph,
-                               remoteIONode,
-                               &inputcd,
-                               &_remoteIOUnit),
-               "AUGraphNodeInfo failed");
     
     
+    
+    AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
+     
+    // 打开AudioUnit
+    AudioComponentInstanceNew(inputComponent, &_remoteIOUnit);
     
     ///0 开启回声消除 默认是开启,所以这里不要动就行了
     UInt32 echoCancellation = 0;
@@ -175,7 +187,7 @@
 -(void)setAudioFormat:(double)sampleRate{
     
     
-    
+    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
    
     
     //Set up stream format for input and output

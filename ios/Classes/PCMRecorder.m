@@ -50,12 +50,10 @@
 
 - (void)start{
     if(!self.isRunning){
-        
+        NSLog(@"开始录音");
+       // long start = [self getNowDateFormatInteger];
         [self setupRemoteIOUnit];
         [self setAudioFormat:sampleRate];
-        
-        //NSLog(@"开始录音%ld",(long)([self getNowDateFormatInteger]));
-        //long start = [self getNowDateFormatInteger];
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
         CheckError(AudioUnitSetProperty(_remoteIOUnit,
@@ -65,22 +63,25 @@
                                             &inputEnableFlag,
                                             sizeof(inputEnableFlag)),
                        "Open input of bus 1 failed");
-        CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
-        CheckError(AUGraphStart(_graph), "AUGraphStart failed");
-        
+      //  CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
+       // CheckError(AUGraphStart(_graph), "AUGraphStart failed");
+        //AudioUnitInitialize(_remoteIOUnit);
         AudioOutputUnitStart(_remoteIOUnit);
         self.isRunning = YES;
-        //NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        // NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        
+      
     }
 }
 - (void)stop{
     if(self.isRunning){
-        CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
-        CheckError(AUGraphStop(_graph), "AUGraphStop failed");
+      //  CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
+       // CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
         self.isRunning = NO;
         hasInitReomteIOUnit = NO;
         self.audioCallBack(nil);
+        NSLog(@"结束录音");
     }
 }
 
@@ -109,9 +110,9 @@
 
     hasInitReomteIOUnit = YES;
     //Create graph
-    CheckError(NewAUGraph(&_graph),
-               "NewAUGraph failed");
-    
+//    CheckError(NewAUGraph(&_graph),
+//               "NewAUGraph failed");
+//    
     //Create nodes and add to the graph
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
@@ -119,25 +120,29 @@
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;
-    AUNode remoteIONode;
+//    AUNode remoteIONode;
     //Add node to the graph
-    CheckError(AUGraphAddNode(_graph,
-                              &inputcd,
-                              &remoteIONode),
-               "AUGraphAddNode failed");
+//    CheckError(AUGraphAddNode(_graph,
+//                              &inputcd,
+//                              &remoteIONode),
+//               "AUGraphAddNode failed");
+//    
+//    //Open the graph
+//    CheckError(AUGraphOpen(_graph),
+//               "AUGraphOpen failed");
+//    
+//    //Get reference to the node
+//    CheckError(AUGraphNodeInfo(_graph,
+//                               remoteIONode,
+//                               &inputcd,
+//                               &_remoteIOUnit),
+//               "AUGraphNodeInfo failed");
     
-    //Open the graph
-    CheckError(AUGraphOpen(_graph),
-               "AUGraphOpen failed");
     
-    //Get reference to the node
-    CheckError(AUGraphNodeInfo(_graph,
-                               remoteIONode,
-                               &inputcd,
-                               &_remoteIOUnit),
-               "AUGraphNodeInfo failed");
-    
-    
+    AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
+     
+    // 打开AudioUnit
+    AudioComponentInstanceNew(inputComponent, &_remoteIOUnit);
     
     ///0 开启回声消除 默认是开启,所以这里不要动就行了
     UInt32 echoCancellation = 0;
@@ -184,8 +189,7 @@
     
     
     
-   
-    
+    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
     //Set up stream format for input and output
     _streamFormat.mFormatID = kAudioFormatLinearPCM;
     _streamFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
@@ -261,7 +265,6 @@ OSStatus _recordCallback(void *inRefCon,
                     1,
                     inNumberFrames,
                     &bufferList);
-    
     if(status == noErr){
         //将采集到的声音，进行回调
         if (audioRecorder.audioCallBack)
