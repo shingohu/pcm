@@ -40,7 +40,6 @@ public class PCMRecorder {
     private AudioRecord mAudioRecord = null;
     //是否正在录音
     private boolean isRecording = false;
-    private boolean isRelease = true;
 
     private int PRE_READ_LENGTH = 320;
 
@@ -80,7 +79,6 @@ public class PCMRecorder {
                         sampleRateInHz, DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT,
                         bufferSize);
             }
-            isRelease = false;
             if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
                 int audioSessionId = mAudioRecord.getAudioSessionId();
                 enableAEC(audioSessionId);
@@ -108,6 +106,7 @@ public class PCMRecorder {
                 isRecording = true;
                 mAudioRecord.startRecording();
                 startRecordingRunner();
+                Log.d(TAG, "开始录音");
             } else {
                 Log.e(TAG, "启动录音失败");
             }
@@ -142,9 +141,7 @@ public class PCMRecorder {
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
-                if (isRelease) {
-                    release();
-                }
+                release();
             }
         };
         mAudioHandleRunner.start();
@@ -169,13 +166,11 @@ public class PCMRecorder {
     }
 
 
-    public synchronized void release() {
-        this.isRelease = true;
-        if (isRecording) {
-            stop();
-        } else if (mAudioRecord != null) {
+    private synchronized void release() {
+        if (mAudioRecord != null) {
             mAudioRecord.release();
             mAudioRecord = null;
+            Log.d(TAG, "结束录音");
         }
     }
 

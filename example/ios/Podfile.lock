@@ -13,6 +13,8 @@ PODS:
     - FlutterMacOS
   - pcm (0.0.1):
     - Flutter
+  - webrtc_agc (0.0.1):
+    - Flutter
   - webrtc_ns (0.0.1):
     - Flutter
 
@@ -22,6 +24,7 @@ DEPENDENCIES:
   - flutter_volume_controller (from `.symlinks/plugins/flutter_volume_controller/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
+  - webrtc_agc (from `.symlinks/plugins/webrtc_agc/ios`)
   - webrtc_ns (from `.symlinks/plugins/webrtc_ns/ios`)
 
 SPEC REPOS:
@@ -40,6 +43,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   pcm:
     :path: ".symlinks/plugins/pcm/ios"
+  webrtc_agc:
+    :path: ".symlinks/plugins/webrtc_agc/ios"
   webrtc_ns:
     :path: ".symlinks/plugins/webrtc_ns/ios"
 
@@ -51,6 +56,7 @@ SPEC CHECKSUMS:
   Mux-Stats-Core: 53902e414f077b2239ea10d909a4cf072c0d4d5c
   path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c
   pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
+  webrtc_agc: d7a2e3beb1772f277cb2d23dbf8bc91f8ee06fff
   webrtc_ns: 5f0acf51762b7f36b26c5869fe1ec01bb239aab3
 
 PODFILE CHECKSUM: 819463e6a0290f5a72f145ba7cde16e8b6ef0796

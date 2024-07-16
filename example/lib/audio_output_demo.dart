@@ -72,8 +72,8 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
 
   @override
   void dispose() {
-    PCMRecorder.release();
-    PCMPlayer.release();
+    PCMRecorder.stop();
+    PCMPlayer.stop();
     AudioManager.currentAudioDeviceNotifier
         .removeListener(onCurrentAudioDeviceChanged);
     AudioManager.audioDevicesNotifier.removeListener(onAudioDevicesChanged);
@@ -152,13 +152,19 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
       await requestAudioFocus();
+      int? start = DateTime.now().millisecondsSinceEpoch;
       PCMRecorder.start(
           preFrameSize: 960,
           audioSource: audioSource,
           onData: (audio) async {
+            if (start != null) {
+              print(
+                  "录音第一帧回调耗时->${DateTime.now().millisecondsSinceEpoch - start!}");
+              start = null;
+            }
+
             if (audio != null) {
-              PCMPlayer.start(audio,
-                  voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
+              PCMPlayer.play(audio);
             }
           });
     } else {
@@ -172,8 +178,7 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
     if (Platform.isAndroid) {
-      PCMPlayer.start(Uint8List(0),
-          voiceCall: audioSource == AudioSource.VOICE_COMMUNICATION);
+      PCMPlayer.play(Uint8List(0), voiceCall: false);
 
       ///苹果不设置
       setAudioDevice();
@@ -194,9 +199,6 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
 
   Future<void> abandonAudioFocus() async {
     AudioManager.abandonAudioFocus();
-    if (Platform.isAndroid) {
-      AudioManager.setAudioModeNormal();
-    }
   }
 
   Future<void> stopRecord() async {

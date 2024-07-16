@@ -28,8 +28,8 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
   @override
   void dispose() {
     webrtcAgc.release();
-    PCMRecorder.release();
-    PCMPlayer.release();
+    PCMRecorder.stop();
+    PCMPlayer.stop();
     super.dispose();
   }
 
@@ -57,7 +57,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                 onPressed: () async {
                   await PCMPlayer.stop();
                   if (audios.length > 0) {
-                    PCMPlayer.start(Uint8List.fromList(audios),
+                    PCMPlayer.play(Uint8List.fromList(audios),
                         voiceCall: false);
                   }
                 },
@@ -67,7 +67,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                   await PCMPlayer.stop();
 
                   if (audios.length > 0) {
-                    PCMPlayer.start(
+                    PCMPlayer.play(
                         Uint8List.fromList(
                             webrtcAgc.process(Uint8List.fromList(audios))),
                         voiceCall: false);
@@ -112,8 +112,8 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
   }
 
   Future<void> stopRecord() async {
-    await PCMRecorder.release();
-    await PCMPlayer.release();
+    await PCMRecorder.stop();
+    await PCMPlayer.stop();
     await abandonAudioFocus();
   }
 }

@@ -23,49 +23,6 @@ class _InnerPCMRecorder {
 
   bool isRecordingNow = false;
   Completer? _stopCompleter;
-  bool _hasInit = false;
-
-  int? _sampleRateInHz;
-  int? _preFrameSize;
-  AudioSource? _audioSource;
-
-  ///是否已经初始化
-  bool get hasInit => _hasInit;
-
-  ///提前初始化录音机
-  Future<void> init({int sampleRateInHz = 8000,
-    int preFrameSize = 320,
-    AudioSource audioSource = AudioSource.VOICE_COMMUNICATION}) async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
-      return;
-    }
-    if (isRecordingNow) {
-      print("recorder is Recording Now");
-      return;
-    }
-    if (_hasInit) {
-      if (this._sampleRateInHz != sampleRateInHz ||
-          this._preFrameSize != preFrameSize ||
-          this._audioSource != audioSource) {
-        print(
-            "recorder has inited, but sampleRateInHz or preFrameSize or audioSource is changed,release and reinit");
-        await release();
-      } else {
-        return;
-      }
-    }
-    bool success = await _channel.invokeMethod("initRecorder", {
-      "sampleRateInHz": sampleRateInHz,
-      "preFrameSize": preFrameSize,
-      "audioSource": audioSource.value,
-    });
-    if (success) {
-      _hasInit = true;
-      this._sampleRateInHz = sampleRateInHz;
-      this._preFrameSize = preFrameSize;
-      this._audioSource = audioSource;
-    }
-  }
 
   /**
    * 开始录音
@@ -74,26 +31,15 @@ class _InnerPCMRecorder {
    * [audioSource]音源选择(android有用)
    * [onData] 音频数据回调
    */
-  Future<bool> start({int sampleRateInHz = 8000,
-    int preFrameSize = 320,
-    AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
-    Function(Uint8List?)? onData}) async {
+  Future<bool> start(
+      {int sampleRateInHz = 8000,
+      int preFrameSize = 320,
+      AudioSource audioSource = AudioSource.VOICE_COMMUNICATION,
+      Function(Uint8List?)? onData}) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return false;
     }
     this._onAudioCallback = onData;
-
-    if (_hasInit) {
-      if (this._sampleRateInHz != sampleRateInHz ||
-          this._preFrameSize != preFrameSize ||
-          this._audioSource != audioSource) {
-        print(
-            "recorder has inited, but sampleRateInHz or preFrameSize or audioSource is changed,release and reinit");
-        await release();
-      } else if (isRecordingNow) {
-        return true;
-      }
-    }
     this.isRecordingNow = true;
     bool success = await _channel.invokeMethod("startRecording", {
       "sampleRateInHz": sampleRateInHz,
@@ -104,10 +50,6 @@ class _InnerPCMRecorder {
       this.isRecordingNow = false;
       _stopCompleter = null;
     } else {
-      _hasInit = true;
-      this._sampleRateInHz = sampleRateInHz;
-      this._preFrameSize = preFrameSize;
-      this._audioSource = audioSource;
       if (_stopCompleter == null) {
         _stopCompleter = Completer();
       }
@@ -157,21 +99,6 @@ class _InnerPCMRecorder {
       _stopCompleter = null;
     }
     isRecordingNow = false;
-  }
-
-  ///销毁录音器
-  Future<void> release() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
-      return;
-    }
-    _hasInit = false;
-    if (isRecordingNow) {
-      await stop();
-    }
-    await _channel.invokeMethod("releaseRecorder");
-    this._sampleRateInHz = null;
-    this._preFrameSize = null;
-    this._audioSource = null;
   }
 
   Future<bool> requestRecordPermission() async {

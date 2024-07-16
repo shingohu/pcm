@@ -56,7 +56,6 @@ public class PCMPlayer {
     private int mBufferSize = 0;
     private Thread mAudioPlayingRunner = null;
     private volatile boolean isPlaying = false;
-    private volatile boolean isRelease = true;
 
     ///是否正在播放
     public boolean isPlaying() {
@@ -76,8 +75,6 @@ public class PCMPlayer {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     mPlayer = new AudioTrack.Builder()
                             .setAudioAttributes(new AudioAttributes.Builder()
-                                    .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
-                                    .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
                                     .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
                                     .build())
                             .setTransferMode(AudioTrack.MODE_STREAM)
@@ -86,14 +83,11 @@ public class PCMPlayer {
                                     .setEncoding(DEFAULT_AUDIO_FORMAT)
                                     .setChannelMask(DEFAULT_CHANNEL_CONFIG)
                                     .build())
-                            .setPerformanceMode(PERFORMANCE_MODE_LOW_LATENCY)
                             .setBufferSizeInBytes(mBufferSize)
                             .build();
                 } else {
                     mPlayer = new AudioTrack.Builder()
                             .setAudioAttributes(new AudioAttributes.Builder()
-                                    .setContentType(voiceCall ? AudioAttributes.CONTENT_TYPE_SPEECH : AudioAttributes.CONTENT_TYPE_MUSIC)
-                                    .setUsage(voiceCall ? AudioAttributes.USAGE_VOICE_COMMUNICATION : AudioAttributes.USAGE_MEDIA)
                                     .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
                                     .build())
                             .setTransferMode(AudioTrack.MODE_STREAM)
@@ -114,7 +108,6 @@ public class PCMPlayer {
                         AudioTrack.MODE_STREAM
                 );
             }
-            this.isRelease = false;
             resetBuffer();
         }
     }
@@ -174,6 +167,7 @@ public class PCMPlayer {
         isPlaying = true;
         if (mPlayer.getPlayState() != PLAYSTATE_PLAYING) {
             mPlayer.play();
+            Log.d(TAG, "开始播放");
         }
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
@@ -205,11 +199,7 @@ public class PCMPlayer {
                     }
                 }
             }
-            if (isRelease) {
-                release();
-            } else {
-                resetBuffer();
-            }
+            release();
         });
         mAudioPlayingRunner.start();
     }
@@ -237,13 +227,11 @@ public class PCMPlayer {
 
     ///销毁播放器
     public synchronized void release() {
-        this.isRelease = true;
-        if (isPlaying) {
-            stop();
-        } else if (mPlayer != null) {
+        if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
             resetBuffer();
+            Log.d(TAG, "结束播放");
         }
     }
 

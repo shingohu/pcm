@@ -562,32 +562,16 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
         public void onAudioFocusChange(int focusChange) {
-            //Log.e("AudioManager", "音频焦点->" + focusChange);
         }
     };
 
     ///请求音频焦点,停止音乐播放器,录音的时候临时占用音频焦点
     public void requestAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocusRequest == null) {
-                audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                        .setOnAudioFocusChangeListener(audioFocusChangeListener)
-                        .build();
-            }
-            audioManager.requestAudioFocus(audioFocusRequest);
-        } else {
-            audioManager.requestAudioFocus(audioFocusChangeListener, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
-        }
+        audioManager.requestAudioFocus(audioFocusChangeListener, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
     }
 
     public void abandonAudioFocus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (audioFocusRequest != null) {
-                int result = audioManager.abandonAudioFocusRequest(audioFocusRequest);
-            }
-        } else {
-            audioManager.abandonAudioFocus(audioFocusChangeListener);
-        }
+        audioManager.abandonAudioFocus(audioFocusChangeListener);
     }
 
 

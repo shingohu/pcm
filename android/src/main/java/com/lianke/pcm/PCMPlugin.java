@@ -83,17 +83,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
         String method = call.method;
 
-        if ("initRecorder".equals(method)) {
-            if (!checkRecordPermission(applicationContext)) {
-                result.success(false);
-                return;
-            }
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            int preFrameSize = call.argument("preFrameSize");
-            int audioSource = call.argument("audioSource");
-            boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, audioSource);
-            result.success(success);
-        } else if ("startRecording".equals(method)) {
+        if ("startRecording".equals(method)) {
             if (!checkRecordPermission(applicationContext)) {
                 result.success(false);
                 return;
@@ -113,21 +103,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("stopRecording".equals(method)) {
             PCMRecorder.shared().stop();
             result.success(true);
-        } else if ("releaseRecorder".equals(method)) {
-            PCMRecorder.shared().release();
-            result.success(true);
         } else if ("requestRecordPermission".equals(method)) {
             requestRecordPermission(result);
         } else if ("checkRecordPermission".equals(method)) {
             result.success(checkRecordPermission(applicationContext));
         }
         ///player
-        if ("initPlayer".equals(method)) {
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            boolean voiceChat = call.argument("voiceChat");
-            PCMPlayer.shared().init(sampleRateInHz, voiceChat);
-            result.success(true);
-        } else if ("startPlaying".equals(method)) {
+        if ("startPlaying".equals(method)) {
             byte[] data = call.argument("data");
             int sampleRateInHz = call.argument("sampleRateInHz");
             boolean voiceChat = call.argument("voiceChat");
@@ -141,9 +123,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             result.success(PCMPlayer.shared().isPlaying());
         } else if ("stopPlaying".equals(method)) {
             PCMPlayer.shared().stop();
-            result.success(true);
-        } else if ("releasePlayer".equals(method)) {
-            PCMPlayer.shared().release();
             result.success(true);
         } else if ("unPlayLength".equals(method)) {
             result.success(PCMPlayer.shared().unPlayLength());

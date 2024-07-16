@@ -29,8 +29,8 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
   @override
   void dispose() {
     webrtcNS.release();
-    PCMRecorder.release();
-    PCMPlayer.release();
+    PCMRecorder.stop();
+    PCMPlayer.stop();
     super.dispose();
   }
 
@@ -58,7 +58,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                 onPressed: () async {
                   await PCMPlayer.stop();
                   if (audios.length > 0) {
-                    PCMPlayer.start(Uint8List.fromList(audios),
+                    PCMPlayer.play(Uint8List.fromList(audios),
                         voiceCall: false);
                   }
                 },
@@ -68,7 +68,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                   await PCMPlayer.stop();
 
                   if (audios.length > 0) {
-                    PCMPlayer.start(
+                    PCMPlayer.play(
                         Uint8List.fromList(
                             webrtcNS.process(Uint8List.fromList(audios))),
                         voiceCall: false);
@@ -115,8 +115,8 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
   }
 
   Future<void> stopRecord() async {
-    await PCMRecorder.release();
-    await PCMPlayer.release();
+    await PCMRecorder.stop();
+    await PCMPlayer.stop();
     await abandonAudioFocus();
   }
 }
