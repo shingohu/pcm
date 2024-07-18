@@ -542,6 +542,9 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                 setCurrentAudioDevice(index);
                 mHandler.post(() -> result.success(true));
             }).start();
+        } else if ("stopBluetoothSco".equals(method)) {
+            stopBluetoothSco();
+            result.success(true);
         }
     }
 
@@ -577,18 +580,22 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     //设置通话模式(耗时大约200ms)
     public void setAudioModeInCommunication() {
-        if (mActivity != null) {
-            mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
+        if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
+            if (mActivity != null) {
+                mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
+            }
+            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
         }
-        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
     }
 
     //设置正常模式(耗时大约200ms)
     public void setAudioModeNormal() {
-        if (mActivity != null) {
-            mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        if (audioManager.getMode() != AudioManager.MODE_NORMAL) {
+            if (mActivity != null) {
+                mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            }
+            audioManager.setMode(AudioManager.MODE_NORMAL);
         }
-        audioManager.setMode(AudioManager.MODE_NORMAL);
     }
 
 

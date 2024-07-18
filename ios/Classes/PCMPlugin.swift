@@ -42,32 +42,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
         PCMPlayerClient.shared.initPlayer()
         instance.registerAudioListener()
-        instance.initAudioSessionForFast()
+        
     }
     
-    
-    
-    
-    ///加快初始化？不确定是否有效
-    func initAudioSessionForFast(){
-        do{
-            if(PCMPlayerClient.shared.isPlaying || PCMRecorderClient.shared.isRecording){
-                return
-            }
-            
-            let session = AVAudioSession.sharedInstance()
-            if(session.category == .playAndRecord){
-                return;
-            }
-            try session.setCategory(.playAndRecord)
-            try session.setMode(.voiceChat)
-//            AVAudioSessionModeVoiceChat，主要用于执行双向语音通信VoIP场景。只能是 AVAudioSessionCategoryPlayAndRecord Category下。在这个模式系统会自动配置AVAudioSessionCategoryOptionAllowBluetooth 这个选项。系统会自动选择最佳的内置麦克风组合支持语音聊天，比如插上耳机就使用耳机上的麦克风进行采集。使用此模式时，该设备的音调君合针对语音进行了优化，并且允许路线组仅缩小为适用于语音聊天的路线。如果应用程序未将其模式设置为其中一个聊天模式（语音，视频或游戏），则AVAudioSessionModeVoiceChat模式将被隐式设置。另一方面，如果应用程序先前已将其类别设置为AVAudioSessionCategoryPlayAndRecord并将其模式设置为AVAudioSessionModeVideoChat或AVAudioSessionModeGameChat，则实例化语音处理I / O音频单元不会导致模式发生更改。
-            try session.setCategory(.playback)
-        }catch {
-            print("设置音频模式为播放和录音模式失败")
-            print(error)
-        }
-    }
+
     
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -264,12 +242,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 return
             }
             let session = AVAudioSession.sharedInstance()
-            if(defaultToSpeaker){
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker])
-            }else{
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP])
+            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP])
+            if(defaultToSpeaker && getAvailableAudioDevices().isEmpty){
+                try session.overrideOutputAudioPort(.speaker)
             }
-            
 //            AVAudioSessionModeVoiceChat，主要用于执行双向语音通信VoIP场景。只能是 AVAudioSessionCategoryPlayAndRecord Category下。在这个模式系统会自动配置AVAudioSessionCategoryOptionAllowBluetooth 这个选项。系统会自动选择最佳的内置麦克风组合支持语音聊天，比如插上耳机就使用耳机上的麦克风进行采集。使用此模式时，该设备的音调君合针对语音进行了优化，并且允许路线组仅缩小为适用于语音聊天的路线。如果应用程序未将其模式设置为其中一个聊天模式（语音，视频或游戏），则AVAudioSessionModeVoiceChat模式将被隐式设置。另一方面，如果应用程序先前已将其类别设置为AVAudioSessionCategoryPlayAndRecord并将其模式设置为AVAudioSessionModeVideoChat或AVAudioSessionModeGameChat，则实例化语音处理I / O音频单元不会导致模式发生更改。
             print("设置音频为播放和录音模式")
         }catch {
@@ -349,6 +325,18 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }
         
         return speakerOn
+    }
+    
+    func isBluetoothOn()->Bool{
+        let session = AVAudioSession.sharedInstance()
+        var isOn = false
+        session.currentRoute.outputs.forEach { output in
+            if(output.portType == .bluetoothHFP || output.portType == .bluetoothA2DP ){
+                isOn = true
+            }
+        }
+        
+        return isOn
     }
     
     
