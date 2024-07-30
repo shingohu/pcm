@@ -62,6 +62,9 @@ public class PCMRecorder {
         if (mAudioRecord == null) {
             int bufferSize = AudioRecord.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT);
+            if (bufferSize < perFrameSize) {
+                bufferSize = perFrameSize;
+            }
             this.PRE_READ_LENGTH = perFrameSize;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
