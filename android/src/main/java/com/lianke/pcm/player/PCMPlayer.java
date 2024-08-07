@@ -164,11 +164,16 @@ public class PCMPlayer {
         if (mAudioPlayingRunner != null || isPlaying) {
             return;
         }
-        isPlaying = true;
+        if (mPlayer == null) {
+            return;
+        }
+
         if (mPlayer.getPlayState() != PLAYSTATE_PLAYING) {
+            isPlaying = true;
             mPlayer.play();
             Log.d(TAG, "开始播放");
         }
+
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
