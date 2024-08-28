@@ -1,5 +1,5 @@
 name: pcm
-description: "A new Flutter project."
+description: "PCM recorder and player."
 version: 0.0.1
 homepage:
 
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  synchronized: ^3.1.0+1
 
 dev_dependencies:
 
