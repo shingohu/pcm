@@ -17,15 +17,22 @@ NS_ASSUME_NONNULL_BEGIN
 @interface PCMPlayer : NSObject
 
 
-@property (nonatomic, copy)   NSData* _Nullable (^audioCallBack)(NSInteger);
-
 @property (nonatomic, assign) BOOL isRunning;
+
+@property (nonatomic, copy)   void (^onPlayComplete)(void);
 
 + (instancetype)shared;
 
 - (void)setUp:(double)sampleRate;
 - (void)start;
 - (void)stop;
+
+- (void)clear;
+
+- (void)feed:(NSData*)data;
+
+
+- (NSInteger)remainingFrames;
 
 
 @end

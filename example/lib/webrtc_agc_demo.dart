@@ -55,7 +55,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                 child: Text("结束录音")),
             TextButton(
                 onPressed: () async {
-                  await PCMPlayer.stop();
+                  await stopPlay();
                   if (audios.length > 0) {
                     PCMPlayer.play(Uint8List.fromList(audios));
                   }
@@ -63,7 +63,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                 child: Text("原生播放")),
             TextButton(
                 onPressed: () async {
-                  await PCMPlayer.stop();
+                  await stopPlay();
 
                   if (audios.length > 0) {
                     PCMPlayer.play(Uint8List.fromList(
@@ -71,6 +71,11 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                   }
                 },
                 child: Text("增益播放")),
+            TextButton(
+                onPressed: () async {
+                  await stopPlay();
+                },
+                child: Text("结束播放")),
           ],
         ),
       ),
@@ -80,7 +85,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
   Future<void> startRecord() async {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
     if (hasPermission) {
-      await stopRecord();
+      await stopPlay();
       await requestAudioFocus();
       audios.clear();
       webrtcAgc.init(8000);
@@ -110,6 +115,10 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
 
   Future<void> stopRecord() async {
     await PCMRecorder.stop();
+    await abandonAudioFocus();
+  }
+
+  Future<void> stopPlay() async {
     await PCMPlayer.stop();
     await abandonAudioFocus();
   }

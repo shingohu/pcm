@@ -15,10 +15,8 @@
 
 @implementation PCMRecorder
 {
-    AUGraph _graph;
     AudioUnit _remoteIOUnit;
     AudioStreamBasicDescription _streamFormat;
-    BOOL hasInitReomteIOUnit;
     double sampleRate;
 }
 
@@ -35,8 +33,8 @@
 {
     self = [super init];
     if (self) {
-        [self setupRemoteIOUnit];
         self->sampleRate = kRate;
+        [self setupRemoteIOUnit:kRate];
     }
     return self;
 }
@@ -52,8 +50,7 @@
     if(!self.isRunning){
         NSLog(@"开始录音");
        // long start = [self getNowDateFormatInteger];
-        [self setupRemoteIOUnit];
-        [self setAudioFormat:sampleRate];
+        [self setupRemoteIOUnit:sampleRate];
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
         CheckError(AudioUnitSetProperty(_remoteIOUnit,
@@ -63,9 +60,6 @@
                                             &inputEnableFlag,
                                             sizeof(inputEnableFlag)),
                        "Open input of bus 1 failed");
-      //  CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
-       // CheckError(AUGraphStart(_graph), "AUGraphStart failed");
-        //AudioUnitInitialize(_remoteIOUnit);
         AudioOutputUnitStart(_remoteIOUnit);
         self.isRunning = YES;
         // NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
@@ -75,11 +69,9 @@
 }
 - (void)stop{
     if(self.isRunning){
-      //  CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
-       // CheckError(AUGraphStop(_graph), "AUGraphStop failed");
         AudioOutputUnitStop(_remoteIOUnit);
+        _remoteIOUnit = nil;
         self.isRunning = NO;
-        hasInitReomteIOUnit = NO;
         self.audioCallBack(nil);
         NSLog(@"结束录音");
     }
@@ -103,57 +95,51 @@
 
 
 
-- (void)setupRemoteIOUnit{
-    if(hasInitReomteIOUnit){
-        return ;
+- (void)setupRemoteIOUnit:(double)sampleRate{
+    
+    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
+    
+    
+    
+    OSType subType = kAudioUnitSubType_RemoteIO;
+    
+    
+    BOOL enableAEC = NO;
+    AVAudioSessionCategory category = [[AVAudioSession sharedInstance] category];
+    if(category == AVAudioSessionCategoryPlayAndRecord){
+        enableAEC = YES;
     }
-
-    hasInitReomteIOUnit = YES;
-    //Create graph
-//    CheckError(NewAUGraph(&_graph),
-//               "NewAUGraph failed");
-//    
-    //Create nodes and add to the graph
+    
+    if(enableAEC){
+        subType = kAudioUnitSubType_VoiceProcessingIO;
+    }
+    
+    
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
-    inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    inputcd.componentSubType = subType;
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;
-//    AUNode remoteIONode;
-    //Add node to the graph
-//    CheckError(AUGraphAddNode(_graph,
-//                              &inputcd,
-//                              &remoteIONode),
-//               "AUGraphAddNode failed");
-//    
-//    //Open the graph
-//    CheckError(AUGraphOpen(_graph),
-//               "AUGraphOpen failed");
-//    
-//    //Get reference to the node
-//    CheckError(AUGraphNodeInfo(_graph,
-//                               remoteIONode,
-//                               &inputcd,
-//                               &_remoteIOUnit),
-//               "AUGraphNodeInfo failed");
-    
+
     
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
      
     // 打开AudioUnit
-    AudioComponentInstanceNew(inputComponent, &_remoteIOUnit);
+    CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"AudioComponentInstanceNew  failed");
     
-    ///0 开启回声消除 默认是开启,所以这里不要动就行了
-    UInt32 echoCancellation = 0;
-    UInt32 size = sizeof(echoCancellation);
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAUVoiceIOProperty_BypassVoiceProcessing,
-                                    kAudioUnitScope_Input,
-                                    0,
-                                    &echoCancellation,
-                                    size),
-               "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
+    if(enableAEC){
+        ///0 开启回声消除 默认是开启,所以这里不要动就行了
+        UInt32 echoCancellation = 0;
+        UInt32 size = sizeof(echoCancellation);
+        CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                        kAUVoiceIOProperty_BypassVoiceProcessing,
+                                        kAudioUnitScope_Input,
+                                        0,
+                                        &echoCancellation,
+                                        size),
+                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
+    }
     
     
     
@@ -167,6 +153,40 @@
                                     &outputEnableFlag,
                                     sizeof(outputEnableFlag)),
                "Open output of bus 0 failed");
+    
+    
+    
+    
+    
+    AudioStreamBasicDescription audioFormat;
+    
+     //Set up stream format for input and output
+    audioFormat.mFormatID = kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    audioFormat.mSampleRate = sampleRate;
+    audioFormat.mFramesPerPacket = 1;
+    audioFormat.mBytesPerFrame = 2;
+    audioFormat.mBytesPerPacket = 2;
+    audioFormat.mBitsPerChannel = kBits;
+    audioFormat.mChannelsPerFrame = kChannels;
+     
+     CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                     kAudioUnitProperty_StreamFormat,
+                                     kAudioUnitScope_Input,
+                                     0,
+                                     &audioFormat,
+                                     sizeof(audioFormat)),
+                "kAudioUnitProperty_StreamFormat of bus 0 failed");
+     CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                     kAudioUnitProperty_StreamFormat,
+                                     kAudioUnitScope_Output,
+                                     1,
+                                     &audioFormat,
+                                     sizeof(audioFormat)),
+                "kAudioUnitProperty_StreamFormat of bus 1 failed");
+    
+    
+    
    
   
     //音频采集结果回调
@@ -181,50 +201,6 @@
                                     sizeof(recordCallback)),
                "couldnt set remote i/o render callback for output");
 }
-
-
-
-
--(void)setAudioFormat:(double)sampleRate{
-    
-    
-    
-    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
-    //Set up stream format for input and output
-    _streamFormat.mFormatID = kAudioFormatLinearPCM;
-    _streamFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    _streamFormat.mSampleRate = sampleRate;
-    _streamFormat.mFramesPerPacket = 1;
-    _streamFormat.mBytesPerFrame = 2;
-    _streamFormat.mBytesPerPacket = 2;
-    _streamFormat.mBitsPerChannel = kBits;
-    _streamFormat.mChannelsPerFrame = kChannels;
-    
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_StreamFormat,
-                                    kAudioUnitScope_Input,
-                                    0,
-                                    &_streamFormat,
-                                    sizeof(_streamFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 0 failed");
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_StreamFormat,
-                                    kAudioUnitScope_Output,
-                                    1,
-                                    &_streamFormat,
-                                    sizeof(_streamFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 1 failed");
-    
-    
-    
-}
-
-
-
-
-
-
-
 
 
 static bool CheckError(OSStatus error, const char *operation)

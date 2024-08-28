@@ -56,7 +56,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                 child: Text("结束录音")),
             TextButton(
                 onPressed: () async {
-                  await PCMPlayer.stop();
+                  await stopPlay();
                   if (audios.length > 0) {
                     PCMPlayer.play(Uint8List.fromList(audios));
                   }
@@ -64,7 +64,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                 child: Text("原生播放")),
             TextButton(
                 onPressed: () async {
-                  await PCMPlayer.stop();
+                  await stopPlay();
 
                   if (audios.length > 0) {
                     PCMPlayer.play(Uint8List.fromList(
@@ -74,9 +74,9 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                 child: Text("降噪播放")),
             TextButton(
                 onPressed: () async {
-                  await PCMPlayer.stop();
+                  await stopPlay();
                 },
-                child: Text("停止播放")),
+                child: Text("结束播放")),
           ],
         ),
       ),
@@ -87,7 +87,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
 
     if (hasPermission) {
-      await stopRecord();
+      await stopPlay();
       await requestAudioFocus();
       audios.clear();
       webrtcNS.init(8000, level: NSLevel.VeryHigh);

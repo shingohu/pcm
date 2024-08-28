@@ -27,8 +27,6 @@ class PCMRecorderClient {
     private var PRE_FRAME_SIZE:Int = 160
     private var samplateRate:Int = 8000
     public var isRecording = false
-    ///是否需要编码为Adpcm
-    private var encodeToADPCM = false
     
     ///音频缓冲
     private var audioBuffer:Data = Data.init();
@@ -56,10 +54,6 @@ class PCMRecorderClient {
         }
     }
     
-    
- 
-    
-    
     ///开始录制
     func start() {
         if(!isRecording){
@@ -86,18 +80,18 @@ class PCMRecorderClient {
     private func recordAudioCallBack(_ audioData: Data?)->Void {
         if(audioData != nil && isRecording){
             audioBuffer.append(audioData!)
-            readNextPCMData1()
+            readNextPCMData()
         }
     }
     
     private func startReadNexPCMDataRunner(){
         DispatchQueue.global(qos: .userInteractive ).async {
-            self.readNextPCMData()
+            self.readNextPCMDataInRunner()
         }
     }
     
     
-    private func readNextPCMData1(){
+    private func readNextPCMData(){
         
         let length = audioBuffer.count
         var readLength = 0 ;
@@ -110,14 +104,14 @@ class PCMRecorderClient {
                 self.onAudioCallback!(data)
             }
             readPCMDataIndex += readLength
-            readNextPCMData1()
+            readNextPCMData()
         }
     }
     
     
     
     
-    private func readNextPCMData(){
+    private func readNextPCMDataInRunner(){
         while self.isRecording {
             let length = audioBuffer.count
             var readLength = 0 ;

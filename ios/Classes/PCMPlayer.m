@@ -13,15 +13,14 @@
 
 @implementation PCMPlayer
 {
-    AUGraph _graph;
     AudioUnit _remoteIOUnit;
-    AudioStreamBasicDescription _streamFormat;
-    BOOL hasInitReomteIOUnit;
     double sampleRate ;
+    NSMutableData* mSamples;
+    AVAudioSessionCategory category;
+    
 }
 
 + (instancetype)shared{
-
     static PCMPlayer *AudioPlayer = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -33,34 +32,198 @@
 {
     self = [super init];
     if (self) {
-        [self setupRemoteIOUnit];
         self->sampleRate = kRate;
+        self->mSamples = [NSMutableData new];
     }
     return self;
 }
 
 
 - (void)setUp:(double)sampleRate{
-    self->sampleRate = sampleRate;
+    if(_remoteIOUnit != nil){
+        if(self->sampleRate != sampleRate){
+            [self stop];
+        }else if(self->category != [[AVAudioSession sharedInstance] category]){
+            [self stop];
+        }
+    }
+    if(_remoteIOUnit == nil){
+        [self setupRemoteIOUnit:sampleRate];
+    }
 }
 
 
 - (void)start{
-    if(!self.isRunning){
-        NSLog(@"开始播放");
-        //long start = [self getNowDateFormatInteger];
-        [self setupRemoteIOUnit];
-        [self setAudioFormat:sampleRate];
-//        CheckError(AUGraphInitialize(_graph),"AUGraphInitialize failed");
-//        CheckError(AUGraphStart(_graph), "AUGraphStart failed");
-        AudioOutputUnitStart(_remoteIOUnit);
-        self.isRunning = YES;
-        
-        //NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
-        
-       
+    
+    if(_remoteIOUnit == nil){
+        [self setupRemoteIOUnit:sampleRate];
+    }
+    
+    if(_remoteIOUnit != nil){
+        if(!self.isRunning){
+            NSLog(@"开始播放");
+            //long start = [self getNowDateFormatInteger];
+            AudioOutputUnitStart(_remoteIOUnit);
+            self.isRunning = YES;
+            //NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        }
     }
 }
+
+- (void)stop{
+    if(_remoteIOUnit != nil){
+        if(self.isRunning){
+            AudioOutputUnitStop(_remoteIOUnit);
+            _remoteIOUnit = nil;
+            self.isRunning = NO;
+            NSLog(@"结束播放");
+        }
+    }
+    [self clear];
+}
+
+
+- (void)feed:(NSData *)data{
+    if(_remoteIOUnit != nil){
+        @synchronized (self->mSamples) {
+            [self->mSamples appendData:data];
+        }
+    }
+}
+
+- (NSInteger)remainingFrames{
+    
+    NSUInteger count = 0;
+    @synchronized (self ->mSamples) {
+        count = [self->mSamples length];
+    }
+    return count;
+}
+
+
+-(void)clear{
+    @synchronized (self->mSamples) {
+        [self->mSamples setLength:0];
+    }
+}
+
+
+- (void)setupRemoteIOUnit:(double)sampleRate{
+    self->sampleRate = sampleRate;
+    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
+    
+    
+    OSType subType = kAudioUnitSubType_RemoteIO;
+    
+    
+    BOOL enableAEC = NO;
+    AVAudioSessionCategory category = [[AVAudioSession sharedInstance] category];
+    if(category == AVAudioSessionCategoryPlayAndRecord){
+        enableAEC = YES;
+    }
+    if(enableAEC){
+        subType = kAudioUnitSubType_VoiceProcessingIO;
+    }
+    self->category = category;
+    //Create nodes and add to the graph
+    AudioComponentDescription inputcd = {0};
+    inputcd.componentType = kAudioUnitType_Output;
+    inputcd.componentSubType = subType;
+    inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
+    inputcd.componentFlagsMask = 0;
+    inputcd.componentFlags = 0;
+
+    
+    AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
+     
+    // 打开AudioUnit
+    CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"Audio Component Instance New Failed");
+    
+
+    
+    AudioStreamBasicDescription audioFormat;
+    
+    //Set up stream format for input and output
+    audioFormat.mFormatID = kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    audioFormat.mSampleRate = sampleRate;
+    audioFormat.mFramesPerPacket = 1;
+    audioFormat.mBytesPerFrame = 2;
+    audioFormat.mBytesPerPacket = 2;
+    audioFormat.mBitsPerChannel = kBits;
+    audioFormat.mChannelsPerFrame = kChannels;
+    
+    
+    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                    kAudioUnitProperty_StreamFormat,
+                                    kAudioUnitScope_Input,
+                                    0,
+                                    &audioFormat,
+                                    sizeof(audioFormat)),
+               "kAudioUnitProperty_StreamFormat of bus 0 failed");
+    
+    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                       kAudioUnitProperty_StreamFormat,
+                                       kAudioUnitScope_Output,
+                                       1,
+                                       &audioFormat,
+                                       sizeof(audioFormat)),
+                  "kAudioUnitProperty_StreamFormat of bus 1 failed");
+    
+    if(enableAEC){
+        ///0 开启回声消除 默认是开启,所以这里不要动就行了
+        UInt32 echoCancellation = 0;
+        UInt32 size = sizeof(echoCancellation);
+        CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                        kAUVoiceIOProperty_BypassVoiceProcessing,
+                                        kAudioUnitScope_Input,
+                                        0,
+                                        &echoCancellation,
+                                        size),
+                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
+    }
+    
+    //禁用录音功能
+      UInt32 inputEnableFlag = 0;
+      CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                      kAudioOutputUnitProperty_EnableIO,
+                                      kAudioUnitScope_Input,
+                                      1,
+                                      &inputEnableFlag,
+                                      sizeof(inputEnableFlag)),
+                 "Open input of bus 1 failed");
+    
+    
+    //启用播放功能
+       UInt32 outputEnableFlag = 1;
+       CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                       kAudioOutputUnitProperty_EnableIO,
+                                       kAudioUnitScope_Output,
+                                       0,
+                                       &outputEnableFlag,
+                                       sizeof(outputEnableFlag)),
+                  "Open output of bus 0 failed");
+    
+    
+    
+   
+  
+    //音频播放回调
+    AURenderCallbackStruct playCallback;
+    playCallback.inputProc = _playCallback;
+    playCallback.inputProcRefCon = (__bridge void *)(self);
+    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                    kAudioUnitProperty_SetRenderCallback,
+                                    kAudioUnitScope_Input,
+                                    0,
+                                    &playCallback,
+                                    sizeof(playCallback)),
+               "kAudioUnitProperty_SetRenderCallback failed");
+    
+    
+}
+
+
 
 
 
@@ -77,147 +240,6 @@
     return  timestampInMilliseconds;
 }
 
-
-- (void)stop{
-    if(self.isRunning){
-//        CheckError(AUGraphUninitialize(_graph), "AUGraphInitialize failed");
-//        CheckError(AUGraphStop(_graph), "AUGraphStop failed");
-        AudioOutputUnitStop(_remoteIOUnit);
-        self.isRunning = NO;
-        hasInitReomteIOUnit = NO;
-        NSLog(@"结束播放");
-    }
-}
-
-
-- (void)setupRemoteIOUnit{
-    if(hasInitReomteIOUnit){
-        return;
-    }
-    hasInitReomteIOUnit = YES;
-    //Create graph
-//    CheckError(NewAUGraph(&_graph),
-//               "NewAUGraph failed");
-    
-    //Create nodes and add to the graph
-    AudioComponentDescription inputcd = {0};
-    inputcd.componentType = kAudioUnitType_Output;
-    inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
-    inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
-    inputcd.componentFlagsMask = 0;
-    inputcd.componentFlags = 0;
-//    AUNode remoteIONode;
-//    //Add node to the graph
-//    CheckError(AUGraphAddNode(_graph,
-//                              &inputcd,
-//                              &remoteIONode),
-//               "AUGraphAddNode failed");
-//    
-//    //Open the graph
-//    CheckError(AUGraphOpen(_graph),
-//               "AUGraphOpen failed");
-//    
-//    //Get reference to the node
-//    CheckError(AUGraphNodeInfo(_graph,
-//                               remoteIONode,
-//                               &inputcd,
-//                               &_remoteIOUnit),
-//               "AUGraphNodeInfo failed");
-    
-    
-    
-    
-    AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
-     
-    // 打开AudioUnit
-    AudioComponentInstanceNew(inputComponent, &_remoteIOUnit);
-    
-    ///0 开启回声消除 默认是开启,所以这里不要动就行了
-    UInt32 echoCancellation = 0;
-    UInt32 size = sizeof(echoCancellation);
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAUVoiceIOProperty_BypassVoiceProcessing,
-                                    kAudioUnitScope_Input,
-                                    0,
-                                    &echoCancellation,
-                                    size),
-               "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
-    
-    
-    //禁用录音功能
-    UInt32 inputEnableFlag = 0;
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioOutputUnitProperty_EnableIO,
-                                    kAudioUnitScope_Input,
-                                    1,
-                                    &inputEnableFlag,
-                                    sizeof(inputEnableFlag)),
-               "Open input of bus 1 failed");
-    
-    
-//    Open output of bus 0(output speaker)
-    //启用播放功能
-    UInt32 outputEnableFlag = 1;
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioOutputUnitProperty_EnableIO,
-                                    kAudioUnitScope_Output,
-                                    0,
-                                    &outputEnableFlag,
-                                    sizeof(outputEnableFlag)),
-               "Open output of bus 0 failed");
-   
-  
-    //音频播放回调
-    AURenderCallbackStruct playCallback;
-    playCallback.inputProc = _playCallback;
-    playCallback.inputProcRefCon = (__bridge void *)(self);
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_SetRenderCallback,
-                                    kAudioUnitScope_Input,
-                                    0,
-                                    &playCallback,
-                                    sizeof(playCallback)),
-               "kAudioUnitProperty_SetRenderCallback failed");
-    
-}
-
-
-
-
--(void)setAudioFormat:(double)sampleRate{
-    
-    
-    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
-   
-    
-    //Set up stream format for input and output
-    _streamFormat.mFormatID = kAudioFormatLinearPCM;
-    _streamFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    _streamFormat.mSampleRate = sampleRate;
-    _streamFormat.mFramesPerPacket = 1;
-    _streamFormat.mBytesPerFrame = 2;
-    _streamFormat.mBytesPerPacket = 2;
-    _streamFormat.mBitsPerChannel = kBits;
-    _streamFormat.mChannelsPerFrame = kChannels;
-    
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_StreamFormat,
-                                    kAudioUnitScope_Input,
-                                    0,
-                                    &_streamFormat,
-                                    sizeof(_streamFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 0 failed");
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_StreamFormat,
-                                    kAudioUnitScope_Output,
-                                    1,
-                                    &_streamFormat,
-                                    sizeof(_streamFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 1 failed");
-    
-    
-    
-}
 
 
 static bool CheckError(OSStatus error, const char *operation)
@@ -248,19 +270,21 @@ OSStatus _playCallback(
                          AudioBufferList             *ioData)
 
 {
-    memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
+   
+    
     PCMPlayer *player = (__bridge PCMPlayer*)inRefCon;
-   // NSLog(@"播放回调%ld",(long)([player getNowDateFormatInteger] ));
-    if (player.audioCallBack) {
-        AudioBuffer buffer =  ioData->mBuffers[0];
-        UInt32 len = buffer.mDataByteSize;
-        NSData* data =  player.audioCallBack(len);
-        if(data != nil && player.isRunning && data.length > 0){
-            buffer.mDataByteSize = len;
-            Byte *tempByte = (Byte *)[data bytes];
-            memcpy(buffer.mData,tempByte,len);
-          //  NSLog(@"读取长度%u",(unsigned int)len);
+    @synchronized (player->mSamples) {
+        NSUInteger bytesToCopy = MIN(ioData->mBuffers[0].mDataByteSize, [player->mSamples length]);
+        if(bytesToCopy>0){
+            // provide samples
+            memcpy(ioData->mBuffers[0].mData, [player->mSamples bytes], bytesToCopy);
+            // pop front bytes
+            NSRange range = NSMakeRange(0, bytesToCopy);
+            [player->mSamples replaceBytesInRange:range withBytes:NULL length:0];
+        }else{
+            memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
         }
+        
     }
     return 0;
 }

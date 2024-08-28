@@ -40,8 +40,15 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         registrar.addApplicationDelegate(instance)
         
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
-        PCMPlayerClient.shared.initPlayer()
+        
+        PCMPlayerClient.shared.setOnPlayComplete {
+            DispatchQueue.main.async{
+                playerChannel.invokeMethod("onPlayComplete", arguments: nil);
+            }
+        }
+        
         instance.registerAudioListener()
+        
         
     }
     
@@ -74,19 +81,26 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             requestRecordPermission(result: result)
         }else if(method == "checkRecordPermission"){
             requestRecordPermission(result: result)
-        }else if(method == "startPlaying"){
+        }
+        else if(method == "startPlaying"){
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            if(!PCMPlayerClient.shared.isPlaying){
+                self.requestAudioFocus()
+            }
             PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
-            PCMPlayerClient.shared.play(audio: data.data)
+            PCMPlayerClient.shared.feed(audio: data.data)
             result(true)
         }else if(method == "isPlaying"){
             result(PCMPlayerClient.shared.isPlaying)
         }else if(method == "stopPlaying"){
             PCMPlayerClient.shared.stop()
             result(true)
-        }else if(method == "unPlayLength"){
-            result(PCMPlayerClient.shared.unPlayLength())
+        }else if(method == "clearPlayer"){
+            PCMPlayerClient.shared.clear()
+            result(true)
+        } else if(method == "remainingFrames"){
+            result(PCMPlayerClient.shared.remainingFrames())
         }else if(method == "abandonAudioFocus"){
             self.abandonAudioFocus()
             result(true)
@@ -308,7 +322,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setActive(true)
-            print("请求音频焦点")
         }catch {
             print("请求音频焦点报错")
             print(error)
