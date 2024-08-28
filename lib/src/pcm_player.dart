@@ -5,30 +5,38 @@ import 'package:flutter/services.dart';
 final _InnerPCMPlayer PCMPlayer = _InnerPCMPlayer._();
 
 class _InnerPCMPlayer {
-  _InnerPCMPlayer._();
-
-  final _channel = const MethodChannel('pcm/recorder');
-  bool isPlayingNow = false;
-
-  /**
-   * 播放PCM数据
-   * [data] pcm数据
-   * [sampleRateInHz]采样率
-   * [voiceCall]是否语音呼叫(android有效)
-   */
-  Future<void> play(
-    Uint8List data, {
-    int sampleRateInHz = 8000,
-    bool voiceCall = false,
-  }) async {
+  _InnerPCMPlayer._() {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    isPlayingNow = true;
-    _channel.invokeMethod("startPlaying", {
+    isPlaying.then((isPlaying) {
+      _isPlayingNow = isPlaying;
+    });
+  }
+
+  final _channel = const MethodChannel('pcm/player');
+
+  bool get isPlayingNow => _isPlayingNow;
+  bool _isPlayingNow = false;
+
+  /**
+   * 以Stream方式持续播放PCM数据
+   * [data] pcm数据
+   * [sampleRateInHz]采样率
+   * [voiceCall]stream type is voice call?（only android）,一般需要配合audio mode一起使用
+   * true: STREAM_VOICE_CALL Used to identify the volume of audio streams for phone calls
+   * false: STREAM_MUSIC Used to identify the volume of audio streams for music playback
+   */
+  Future<void> play(Uint8List data,
+      {int sampleRateInHz = 8000, bool voiceCall = false}) async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
+    }
+    _isPlayingNow = true;
+    return _channel.invokeMethod("startPlaying", {
       "data": data,
       "sampleRateInHz": sampleRateInHz,
-      "voiceChat": voiceCall,
+      "voiceCall": voiceCall,
     });
   }
 
@@ -40,20 +48,28 @@ class _InnerPCMPlayer {
     return await _channel.invokeMethod("isPlaying");
   }
 
-  ///结束播放
+  ///结束播放(销毁播放器)
   Future<void> stop() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
     await _channel.invokeMethod("stopPlaying");
-    isPlayingNow = false;
+    _isPlayingNow = false;
   }
 
-  ///待播放长度
-  Future<int> unPlayLength() async {
+  ///清空播放器
+  Future<void> clear() async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
+    }
+    await _channel.invokeMethod("clearPlayer");
+  }
+
+  ///剩余播放帧长度
+  Future<int> remainingFrames() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return 0;
     }
-    return await _channel.invokeMethod("unPlayLength");
+    return await _channel.invokeMethod("remainingFrames");
   }
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
@@ -15,8 +14,6 @@ class AudioOutputDemoPage extends StatefulWidget {
 }
 
 class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
-  AudioSource get audioSource => AudioSource.VOICE_COMMUNICATION;
-
   @override
   void initState() {
     AudioManager.currentAudioDeviceNotifier
@@ -34,6 +31,14 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
     changeAudioDeviceTimer = Timer(Duration(milliseconds: 200), () {
       isChangeAudioDevice = false;
     });
+    if (PCMPlayer.isPlayingNow) {
+      Future.delayed(Duration(milliseconds: 100), () async {
+        int remain = await PCMPlayer.remainingFrames();
+        if (remain > 1600) {
+          PCMPlayer.clear();
+        }
+      });
+    }
   }
 
   bool isChangeAudioDevice = false;
@@ -155,7 +160,7 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
       int? start = DateTime.now().millisecondsSinceEpoch;
       PCMRecorder.start(
           preFrameSize: 960,
-          audioSource: audioSource,
+          enableAEC: true,
           onData: (audio) async {
             if (start != null) {
               print(
@@ -164,7 +169,7 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
             }
 
             if (audio != null) {
-              PCMPlayer.play(audio);
+              PCMPlayer.play(audio, voiceCall: true);
             }
           });
     } else {
@@ -174,12 +179,11 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
 
   Future<void> requestAudioFocus() async {
     if (Platform.isAndroid) {
+      await AudioManager.setAudioModeInCommunication();
     } else if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
     }
     if (Platform.isAndroid) {
-      PCMPlayer.play(Uint8List(0), voiceCall: false);
-
       ///苹果不设置
       setAudioDevice();
     }
@@ -205,5 +209,8 @@ class _AudioOutputDemoPageState extends State<AudioOutputDemoPage> {
     await PCMRecorder.stop();
     await PCMPlayer.stop();
     await abandonAudioFocus();
+    if (Platform.isAndroid) {
+      await AudioManager.setAudioModeNormal();
+    }
   }
 }

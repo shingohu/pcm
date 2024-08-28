@@ -203,14 +203,14 @@ class _AudioManager {
     return await _channel.invokeMethod("abandonAudioFocus");
   }
 
-  ///设置音频模式为通话(耗时大约200ms),可延后设置
+  ///设置音频模式为通话
   Future<void> setAudioModeInCommunication() async {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod("setAudioModeInCommunication");
     }
   }
 
-  ///设置音频模式为正常(耗时大约200ms)
+  ///设置音频模式为正常
   Future<void> setAudioModeNormal() async {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod("setAudioModeNormal");
@@ -232,6 +232,22 @@ class _AudioManager {
       await _channel.invokeMethod("setPlayAndRecordSession", {
         "defaultToSpeaker": defaultToSpeaker,
       });
+    }
+  }
+
+  ///设置录音模式
+  Future<void> setRecordSession() async {
+    if (Platform.isIOS) {
+      ///设置这个之后,iOS当前的路由有可能变化
+      await _channel.invokeMethod("setRecordSession");
+    }
+  }
+
+  ///设置播放模式
+  Future<void> setPlaybackSession() async {
+    if (Platform.isIOS) {
+      ///设置这个之后,iOS当前的路由有可能变化
+      await _channel.invokeMethod("setPlaybackSession");
     }
   }
 

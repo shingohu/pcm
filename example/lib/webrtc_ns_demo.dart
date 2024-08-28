@@ -58,8 +58,7 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                 onPressed: () async {
                   await PCMPlayer.stop();
                   if (audios.length > 0) {
-                    PCMPlayer.play(Uint8List.fromList(audios),
-                        voiceCall: false);
+                    PCMPlayer.play(Uint8List.fromList(audios));
                   }
                 },
                 child: Text("原生播放")),
@@ -68,13 +67,16 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
                   await PCMPlayer.stop();
 
                   if (audios.length > 0) {
-                    PCMPlayer.play(
-                        Uint8List.fromList(
-                            webrtcNS.process(Uint8List.fromList(audios))),
-                        voiceCall: false);
+                    PCMPlayer.play(Uint8List.fromList(
+                        webrtcNS.process(Uint8List.fromList(audios))));
                   }
                 },
                 child: Text("降噪播放")),
+            TextButton(
+                onPressed: () async {
+                  await PCMPlayer.stop();
+                },
+                child: Text("停止播放")),
           ],
         ),
       ),
@@ -83,15 +85,22 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
 
   Future<void> startRecord() async {
     bool hasPermission = await PCMRecorder.requestRecordPermission();
+
     if (hasPermission) {
       await stopRecord();
       await requestAudioFocus();
       audios.clear();
       webrtcNS.init(8000, level: NSLevel.VeryHigh);
+      int? start = DateTime.now().millisecondsSinceEpoch;
       PCMRecorder.start(
-          preFrameSize: 960,
-          audioSource: AudioSource.MIC,
+          preFrameSize: 160,
+          enableAEC: false,
           onData: (audio) async {
+            if (start != null) {
+              print(
+                  "录音第一帧回调耗时->${DateTime.now().millisecondsSinceEpoch - start!}");
+              start = null;
+            }
             if (audio != null) {
               audios.addAll(audio);
             }
@@ -104,18 +113,23 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
   Future<void> requestAudioFocus() async {
     if (Platform.isIOS) {
       await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
+      //await AudioManager.setRecordSession();
     }
   }
 
   Future<void> abandonAudioFocus() async {
-    AudioManager.abandonAudioFocus();
+    await AudioManager.abandonAudioFocus();
     if (Platform.isAndroid) {
-      AudioManager.setAudioModeNormal();
+      await AudioManager.setAudioModeNormal();
     }
   }
 
   Future<void> stopRecord() async {
     await PCMRecorder.stop();
+    await abandonAudioFocus();
+  }
+
+  Future<void> stopPlay() async {
     await PCMPlayer.stop();
     await abandonAudioFocus();
   }

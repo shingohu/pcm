@@ -523,10 +523,10 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             abandonAudioFocus();
             result.success(true);
         } else if ("setAudioModeNormal".equals(method)) {
-            setAudioModeNormal();
+            new Thread(this::setAudioModeNormal).start();
             result.success(true);
         } else if ("setAudioModeInCommunication".equals(method)) {
-            setAudioModeInCommunication();
+            new Thread(this::setAudioModeInCommunication).start();
             result.success(true);
         } else if ("isTelephoneCalling".equals(method)) {
             result.success(isTelephoneCalling());
@@ -559,8 +559,6 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         return audioManager.isSpeakerphoneOn();
     }
 
-    AudioFocusRequest audioFocusRequest;
-
     ///释放音频焦点,录音结束的时候释放音频焦点
     final AudioManager.OnAudioFocusChangeListener audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
         @Override
@@ -578,24 +576,22 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
     }
 
 
-    //设置通话模式(耗时大约200ms)
+    //设置通话模式
     public void setAudioModeInCommunication() {
-        if (audioManager.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
-            if (mActivity != null) {
-                mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
-            }
-            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        if (mActivity != null) {
+            mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
         }
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
     }
 
-    //设置正常模式(耗时大约200ms)
+    //设置正常模式
     public void setAudioModeNormal() {
-        if (audioManager.getMode() != AudioManager.MODE_NORMAL) {
-            if (mActivity != null) {
-                mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
-            }
-            audioManager.setMode(AudioManager.MODE_NORMAL);
+
+        if (mActivity != null) {
+            mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         }
+        audioManager.setMode(AudioManager.MODE_NORMAL);
+
     }
 
 

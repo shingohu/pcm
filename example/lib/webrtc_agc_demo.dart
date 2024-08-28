@@ -57,8 +57,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                 onPressed: () async {
                   await PCMPlayer.stop();
                   if (audios.length > 0) {
-                    PCMPlayer.play(Uint8List.fromList(audios),
-                        voiceCall: false);
+                    PCMPlayer.play(Uint8List.fromList(audios));
                   }
                 },
                 child: Text("原生播放")),
@@ -67,10 +66,8 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
                   await PCMPlayer.stop();
 
                   if (audios.length > 0) {
-                    PCMPlayer.play(
-                        Uint8List.fromList(
-                            webrtcAgc.process(Uint8List.fromList(audios))),
-                        voiceCall: false);
+                    PCMPlayer.play(Uint8List.fromList(
+                        webrtcAgc.process(Uint8List.fromList(audios))));
                   }
                 },
                 child: Text("增益播放")),
@@ -90,7 +87,7 @@ class _WebrtcAGCDemoPageState extends State<WebrtcAGCDemoPage> {
       webrtcAgc.setConfig(targetLevelDBFS: 3, compressionGainDB: 20);
       PCMRecorder.start(
           preFrameSize: 960,
-          audioSource: AudioSource.MIC,
+          enableAEC: false,
           onData: (audio) async {
             if (audio != null) {
               audios.addAll(audio);

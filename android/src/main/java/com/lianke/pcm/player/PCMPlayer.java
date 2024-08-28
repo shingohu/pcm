@@ -1,8 +1,5 @@
 package com.lianke.pcm.player;
 
-import static android.media.AudioTrack.PERFORMANCE_MODE_LOW_LATENCY;
-import static android.media.AudioTrack.PLAYSTATE_PLAYING;
-
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
@@ -13,23 +10,24 @@ import android.os.Process;
 import android.util.Log;
 
 import com.lianke.BuildConfig;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class PCMPlayer {
 
     private final static String TAG = "PCMPlayer";
 
+    private int MAX_FRAMES_PER_BUFFER = 160;
+
     //=======================AudioTrack Default Settings=======================
-    ///STREAM_VOICE_CALL 播放时默认声音从听筒出
     private static final int STREAM_VOICE_CALL = AudioManager.STREAM_VOICE_CALL;
     private static final int STREAM_MUSIC = AudioManager.STREAM_MUSIC;
 
-    private static final int DEFAULT_SAMPLING_RATE = 8000;//模拟器仅支持从麦克风输入8kHz采样率
     private static final int DEFAULT_CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO;
     private static final int DEFAULT_AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 
@@ -40,42 +38,45 @@ public class PCMPlayer {
 
     }
 
+
     public static PCMPlayer shared() {
         return instance;
     }
 
+    private final Lock samplesLock = new ReentrantLock();
+    private final LinkedList<ByteBuffer> mSampleBuffer = new LinkedList<>();
 
     private volatile AudioTrack mPlayer;
 
-
-    private final ByteArrayOutputStream buffers1 = new ByteArrayOutputStream();
-    private final LinkedList<byte[]> buffers2 = new LinkedList<>();
-    ///读取缓冲区的下标
-    private int readBufferIndex = 0;
-    private boolean useMethod1 = false;
-    private int mBufferSize = 0;
     private Thread mAudioPlayingRunner = null;
     private volatile boolean isPlaying = false;
+
 
     ///是否正在播放
     public boolean isPlaying() {
         return isPlaying;
     }
 
-
     public boolean hasInit() {
         return mPlayer != null;
     }
 
-    public void init(int sampleRateInHz, boolean voiceCall) {
+    public void setUp(int sampleRateInHz, boolean voiceCall) {
+        int streamType = voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC;
+        if (mPlayer != null) {
+            if (mPlayer.getSampleRate() != sampleRateInHz || mPlayer.getStreamType() != streamType) {
+                stop();
+            }
+        }
+        MAX_FRAMES_PER_BUFFER = sampleRateInHz / 100 * 2;
         if (mPlayer == null) {
-            mBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
+            int mMinBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT));
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     mPlayer = new AudioTrack.Builder()
                             .setAudioAttributes(new AudioAttributes.Builder()
-                                    .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
+                                    .setLegacyStreamType(streamType)
                                     .build())
                             .setTransferMode(AudioTrack.MODE_STREAM)
                             .setAudioFormat(new AudioFormat.Builder()
@@ -83,12 +84,12 @@ public class PCMPlayer {
                                     .setEncoding(DEFAULT_AUDIO_FORMAT)
                                     .setChannelMask(DEFAULT_CHANNEL_CONFIG)
                                     .build())
-                            .setBufferSizeInBytes(mBufferSize)
+                            .setBufferSizeInBytes(mMinBufferSize)
                             .build();
                 } else {
                     mPlayer = new AudioTrack.Builder()
                             .setAudioAttributes(new AudioAttributes.Builder()
-                                    .setLegacyStreamType(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC)
+                                    .setLegacyStreamType(streamType)
                                     .build())
                             .setTransferMode(AudioTrack.MODE_STREAM)
                             .setAudioFormat(new AudioFormat.Builder()
@@ -96,22 +97,21 @@ public class PCMPlayer {
                                     .setEncoding(DEFAULT_AUDIO_FORMAT)
                                     .setChannelMask(DEFAULT_CHANNEL_CONFIG)
                                     .build())
-                            .setBufferSizeInBytes(mBufferSize)
+                            .setBufferSizeInBytes(mMinBufferSize)
                             .build();
                 }
             } else {
-                mPlayer = new AudioTrack(voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC,
+                mPlayer = new AudioTrack(streamType,
                         sampleRateInHz, //sample rate
                         DEFAULT_CHANNEL_CONFIG, //1 channel
                         DEFAULT_AUDIO_FORMAT, // 16-bit
-                        mBufferSize,
+                        mMinBufferSize,
                         AudioTrack.MODE_STREAM
                 );
             }
-            resetBuffer();
+            mSamplesClear();
         }
     }
-
 
     public AudioDeviceInfo getPreferredDevice() {
         if (mPlayer != null) {
@@ -133,80 +133,74 @@ public class PCMPlayer {
         }
     }
 
-    public void play(byte[] pcm) {
-        if (mPlayer != null) {
-            startPlayingRunner();
-            try {
-                if (pcm != null && pcm.length != 0) {
-                    if (useMethod1) {
-                        buffers1.write(pcm);
-                    } else {
-                        buffers2.add(pcm);
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
-
-    private synchronized void stopPlayingRunner() {
+    private synchronized void starPlaybackThread() {
         if (mAudioPlayingRunner != null) {
-            if (!mAudioPlayingRunner.isInterrupted()) {
-                mAudioPlayingRunner.interrupt();
-            }
-            mAudioPlayingRunner = null;
-        }
-    }
-
-    private synchronized void startPlayingRunner() {
-        if (mAudioPlayingRunner != null || isPlaying) {
             return;
         }
         if (mPlayer == null) {
             return;
         }
-
-        if (mPlayer.getPlayState() != PLAYSTATE_PLAYING) {
-            isPlaying = true;
-            mPlayer.play();
-            Log.d(TAG, "开始播放");
-        }
-
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-            if (useMethod1) {
-                int readLength = mBufferSize;
-                while (isPlaying && !Thread.interrupted()) {
-                    int size = buffers1.size();
-                    byte[] data = new byte[0];
-                    if (size - readBufferIndex >= readLength) {
-                        data = subByte(buffers1.toByteArray(), readBufferIndex, readLength);
+            while (isPlaying && !Thread.interrupted()) {
+                if (!mSamplesIsEmpty()) {
+                    ByteBuffer data = mSamplesPop();
+                    if (data != null) {
+                        data = data.duplicate();
                     }
-                    if (mPlayer != null && data.length > 0) {
-                        int length = mPlayer.write(data, 0, data.length, AudioTrack.WRITE_NON_BLOCKING);
-                        readBufferIndex += length;
-                    }
-                }
-            } else {
-                while (isPlaying && !Thread.interrupted()) {
-                    if (buffers2.size() > readBufferIndex) {
-                        if (mPlayer != null) {
-                            byte[] data = buffers2.get(readBufferIndex);
-                            if (data != null) {
-                                int readLength = data.length;
-                                int length = mPlayer.write(data, 0, readLength, AudioTrack.WRITE_BLOCKING);
-                            }
-                            readBufferIndex++;
-                        }
+                    if (data != null && mPlayer != null) {
+                        mPlayer.write(data, data.remaining(), AudioTrack.WRITE_BLOCKING);
                     }
                 }
             }
-            release();
         });
+        mAudioPlayingRunner.setPriority(Thread.MAX_PRIORITY);
         mAudioPlayingRunner.start();
+    }
+
+    public void stop() {
+        if (mPlayer != null) {
+            mPlayer.stop();
+            isPlaying = false;
+        }
+        stopPlaybackThread();
+        if (mPlayer != null) {
+            mPlayer.release();
+            mPlayer = null;
+            print("结束播放");
+        }
+        isPlaying = false;
+        mSamplesClear();
+    }
+
+    public void clear() {
+        if (mPlayer != null && isPlaying) {
+            mPlayer.pause();
+            mPlayer.flush();
+            mPlayer.play();
+        }
+        mSamplesClear();
+    }
+
+    private void startPlay() {
+        if (mPlayer != null && !isPlaying) {
+            isPlaying = true;
+            mPlayer.play();
+            starPlaybackThread();
+            print("开始播放");
+        }
+    }
+
+
+    public void feed(byte[] buffer) {
+        if (mPlayer != null) {
+            startPlay();
+            if (buffer.length > 0) {
+                mSamplesPush(buffer);
+            }
+        }
     }
 
     private byte[] subByte(byte[] src, int off, int length) {
@@ -216,64 +210,79 @@ public class PCMPlayer {
     }
 
 
-    ///立刻停止播放
-    public synchronized void stop() {
-        if (mPlayer != null) {
-            if (isPlaying) {
-                isPlaying = false;
-                stopPlayingRunner();
-                mPlayer.pause();
-                mPlayer.flush();
-                mPlayer.stop();
-            }
-        }
+    public synchronized long remainingFrames() {
+        return mSamplesRemainingFrames();
     }
 
 
-    ///销毁播放器
-    public synchronized void release() {
-        if (mPlayer != null) {
-            mPlayer.release();
-            mPlayer = null;
-            resetBuffer();
-            Log.d(TAG, "结束播放");
-        }
-    }
-
-    private void resetBuffer() {
-        buffers1.reset();
-        buffers2.clear();
-        readBufferIndex = 0;
-    }
-
-    public synchronized int unPlayLength() {
-        if (useMethod1) {
-            int size = buffers1.size() - readBufferIndex;
-            return Math.max(size, 0);
-        } else {
-            try {
-                int size = buffers2.size();
-                int index = readBufferIndex;
-                int i = size - index;
-                if (i > 0) {
-                    int count = 0;
-                    List<byte[]> datas = buffers2.subList(index, size);
-                    for (int k = 0; k < datas.size(); k++) {
-                        count += datas.get(k).length;
-                    }
-                    return count;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return 0;
-        }
-    }
-
-
-    private static void print(String tag, String msg) {
+    private static void print(String msg) {
         if (BuildConfig.DEBUG) {
-            Log.e(tag, msg);
+            Log.e(TAG, msg);
+        }
+    }
+
+    private void mSamplesClear() {
+        samplesLock.lock();
+        mSampleBuffer.clear();
+        samplesLock.unlock();
+    }
+
+
+    private ByteBuffer mSamplesPop() {
+        samplesLock.lock();
+        ByteBuffer out = mSampleBuffer.poll();
+        samplesLock.unlock();
+        return out;
+    }
+
+    private void mSamplesPush(byte[] buffer) {
+        samplesLock.lock();
+        List<ByteBuffer> got = split(buffer, MAX_FRAMES_PER_BUFFER);
+        mSampleBuffer.addAll(got);
+        samplesLock.unlock();
+    }
+
+    private List<ByteBuffer> split(byte[] buffer, int maxSize) {
+        List<ByteBuffer> chunks = new ArrayList<>();
+        int offset = 0;
+        while (offset < buffer.length) {
+            int length = Math.min(buffer.length - offset, maxSize);
+            ByteBuffer b = ByteBuffer.allocate(length);
+            b.put(buffer, offset, length);
+            b.rewind();
+            chunks.add(b);
+            offset += length;
+        }
+        return chunks;
+    }
+
+    private boolean mSamplesIsEmpty() {
+        samplesLock.lock();
+        boolean out = mSampleBuffer.size() == 0;
+        samplesLock.unlock();
+        return out;
+    }
+
+    private long mSamplesRemainingFrames() {
+        samplesLock.lock();
+        long totalBytes = 0;
+        for (ByteBuffer sampleBuffer : mSampleBuffer) {
+            totalBytes += sampleBuffer.remaining();
+        }
+        samplesLock.unlock();
+        return totalBytes;
+    }
+
+
+    private void stopPlaybackThread() {
+        if (mAudioPlayingRunner != null) {
+            mAudioPlayingRunner.interrupt();
+            try {
+                mAudioPlayingRunner.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            mAudioPlayingRunner = null;
         }
     }
 

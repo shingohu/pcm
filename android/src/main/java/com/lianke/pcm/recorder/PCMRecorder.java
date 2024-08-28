@@ -1,5 +1,6 @@
 package com.lianke.pcm.recorder;
 
+import static java.lang.Thread.MAX_PRIORITY;
 
 import android.annotation.SuppressLint;
 import android.media.AudioFormat;
@@ -15,6 +16,10 @@ import android.os.Process;
 
 import com.lianke.BuildConfig;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+
 
 /**
  * 音频录制
@@ -22,8 +27,8 @@ import com.lianke.BuildConfig;
 public class PCMRecorder {
     private final static String TAG = "PCMRecorder";
     //=======================AudioRecord Default Settings=======================
-    private static final int DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.MIC;
-    private static final int VOICE_COMMUNICATION = MediaRecorder.AudioSource.VOICE_COMMUNICATION;
+    private static final int AUDIO_SOURCE_MIC = MediaRecorder.AudioSource.MIC;
+    private static final int AUDIO_SOURCE_VC = MediaRecorder.AudioSource.VOICE_COMMUNICATION;
     public static final int DEFAULT_SAMPLING_RATE = 8000;//模拟器仅支持从麦克风输入8kHz采样率
     public static final int DEFAULT_CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     public static final int DEFAULT_AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
@@ -45,7 +50,8 @@ public class PCMRecorder {
 
     private Thread mAudioHandleRunner = null;
     private RecordListener recordListener;
-
+    private ByteArrayOutputStream mSampleBuffer = new ByteArrayOutputStream();
+    private int readBufferIndex = 0;
 
     public void setRecordListener(RecordListener recordListener) {
         this.recordListener = recordListener;
@@ -58,8 +64,10 @@ public class PCMRecorder {
      * @param perFrameSize   每帧读取大小
      * @return 初始化是否成功
      */
-    public boolean init(int sampleRateInHz, int perFrameSize, int audioSource) {
+    public boolean init(int sampleRateInHz, int perFrameSize, boolean enableAEC) {
         if (mAudioRecord == null) {
+            mSampleBuffer.reset();
+            readBufferIndex = 0;
             int bufferSize = AudioRecord.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT);
             if (bufferSize < perFrameSize) {
@@ -74,19 +82,24 @@ public class PCMRecorder {
                                 .setChannelMask(DEFAULT_CHANNEL_CONFIG)
                                 .setEncoding(DEFAULT_AUDIO_FORMAT)
                                 .build())
-                        .setAudioSource(audioSource)
+                        .setAudioSource(enableAEC ? AUDIO_SOURCE_VC : AUDIO_SOURCE_MIC)
                         .setBufferSizeInBytes(bufferSize)
                         .build();
             } else {
-                mAudioRecord = new AudioRecord(audioSource,
+                mAudioRecord = new AudioRecord(enableAEC ? AUDIO_SOURCE_VC : AUDIO_SOURCE_MIC,
                         sampleRateInHz, DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT,
                         bufferSize);
             }
             if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
-                int audioSessionId = mAudioRecord.getAudioSessionId();
-                enableAEC(audioSessionId);
-                enableNS(audioSessionId);
-                enableAGC(audioSessionId);
+                if (enableAEC) {
+                    int audioSessionId = mAudioRecord.getAudioSessionId();
+                    new Thread(() -> {
+                        enableAEC(audioSessionId);
+                        enableNS(audioSessionId);
+                        enableAGC(audioSessionId);
+                    }).start();
+                }
+
                 return true;
             }
             mAudioRecord = null;
@@ -107,16 +120,16 @@ public class PCMRecorder {
             }
             if (mAudioRecord != null) {
                 isRecording = true;
-                mAudioRecord.startRecording();
                 startRecordingRunner();
-                Log.d(TAG, "开始录音");
+                mAudioRecord.startRecording();
+                print("开始录音");
             } else {
-                Log.e(TAG, "启动录音失败");
+                print("启动录音失败");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            Log.e(TAG, "启动录音失败");
-            release();
+            print("启动录音失败");
+            stop();
         }
         return isRecording;
     }
@@ -128,53 +141,67 @@ public class PCMRecorder {
             public void run() {
                 ///设置优先级
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-                byte[] pcmBuffer = new byte[PRE_READ_LENGTH];
-                while (isRecording && !Thread.interrupted()) {
-                    if (mAudioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
-                        int readSize = mAudioRecord.read(pcmBuffer, 0, PRE_READ_LENGTH);
-                        if (readSize > 0) {
-                            if (readSize >= PRE_READ_LENGTH) {
+
+                int readLength = PRE_READ_LENGTH;
+                byte[] pcmBuffer = new byte[readLength];
+                while (isRecording && !Thread.interrupted() && mAudioRecord != null) {
+                    int readSize = mAudioRecord.read(pcmBuffer, 0, readLength);
+                    if (readSize > 0) {
+                        try {
+                            mSampleBuffer.write(Arrays.copyOf(pcmBuffer, readSize));
+                            while (mSampleBuffer.size() - readBufferIndex >= PRE_READ_LENGTH) {
+                                int length = PRE_READ_LENGTH;
+                                byte[] buffer = new byte[length];
+                                System.arraycopy(mSampleBuffer.toByteArray(), readBufferIndex, buffer, 0, length);
+                                readBufferIndex += length;
                                 if (recordListener != null) {
-                                    recordListener.onAudioProcess(pcmBuffer);
+                                    recordListener.onAudioProcess(buffer);
                                 }
                             }
+                        } catch (IOException e) {
+
                         }
                     }
+
                 }
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
-                release();
             }
         };
+        mAudioHandleRunner.setPriority(MAX_PRIORITY);
         mAudioHandleRunner.start();
     }
 
 
     private void stopRecordingRunner() {
-        if (mAudioHandleRunner != null && !mAudioHandleRunner.isInterrupted()) {
+        if (mAudioHandleRunner != null) {
             mAudioHandleRunner.interrupt();
+            try {
+                mAudioHandleRunner.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            mAudioHandleRunner = null;
         }
-        mAudioHandleRunner = null;
+
+
     }
 
     public synchronized void stop() {
         if (mAudioRecord != null) {
-            if (isRecording) {
-                isRecording = false;
-                mAudioRecord.stop();
-                stopRecordingRunner();
-            }
+            mAudioRecord.stop();
+            isRecording = false;
         }
-    }
-
-
-    private synchronized void release() {
+        stopRecordingRunner();
         if (mAudioRecord != null) {
+            isRecording = false;
             mAudioRecord.release();
             mAudioRecord = null;
-            Log.d(TAG, "结束录音");
+            print("结束录音");
         }
+        mSampleBuffer.reset();
+        readBufferIndex = 0;
     }
 
 
@@ -220,6 +247,12 @@ public class PCMRecorder {
                 if (AudioEffect.SUCCESS == resultCode) {
                 }
             }
+        }
+    }
+
+    private void print(String msg) {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, msg);
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.core.content.PermissionChecker;
 
 import com.lianke.audioswitch.AudioSwitch;
 import com.lianke.pcm.player.PCMPlayer;
+import com.lianke.pcm.player.PlayerListener;
 import com.lianke.pcm.recorder.PCMRecorder;
 import com.lianke.pcm.recorder.RecordListener;
 import com.lianke.pcm.util.Util;
@@ -71,7 +72,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         utilChannel.setMethodCallHandler(this);
 
 
-        setPCMRecorderListener();
+        setPCMListener();
 
 
         audioSwitch = new AudioSwitch();
@@ -88,16 +89,24 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
                 return;
             }
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            int preFrameSize = call.argument("preFrameSize");
-            int audioSource = call.argument("audioSource");
-            boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, audioSource);
-            if (success) {
-                audioSwitch.requestAudioFocus();
-                result.success(PCMRecorder.shared().start());
-            } else {
-                result.success(false);
-            }
+            new Thread(() -> {
+                int sampleRateInHz = call.argument("sampleRateInHz");
+                int preFrameSize = call.argument("preFrameSize");
+                boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
+
+                boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
+
+                if (success) {
+                    success = PCMRecorder.shared().start();
+                    if (success) {
+                        audioSwitch.requestAudioFocus();
+                    }
+                }
+                boolean finalSuccess = success;
+                uiHandler.post(() -> result.success(finalSuccess));
+            }).start();
+
+
         } else if ("isRecording".equals(method)) {
             result.success(PCMRecorder.shared().isRecording());
         } else if ("stopRecording".equals(method)) {
@@ -112,23 +121,25 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         if ("startPlaying".equals(method)) {
             byte[] data = call.argument("data");
             int sampleRateInHz = call.argument("sampleRateInHz");
-            boolean voiceChat = call.argument("voiceChat");
-            if (!PCMPlayer.shared().hasInit() || !PCMPlayer.shared().isPlaying()) {
+            boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
+            boolean needRequestAudioFocus = !PCMPlayer.shared().hasInit() || !PCMPlayer.shared().isPlaying();
+            PCMPlayer.shared().setUp(sampleRateInHz, voiceCall);
+            PCMPlayer.shared().feed(data);
+            if (needRequestAudioFocus) {
                 audioSwitch.requestAudioFocus();
             }
-            PCMPlayer.shared().init(sampleRateInHz, voiceChat);
-            PCMPlayer.shared().play(data);
             result.success(true);
         } else if ("isPlaying".equals(method)) {
             result.success(PCMPlayer.shared().isPlaying());
         } else if ("stopPlaying".equals(method)) {
             PCMPlayer.shared().stop();
             result.success(true);
-        } else if ("unPlayLength".equals(method)) {
-            result.success(PCMPlayer.shared().unPlayLength());
+        } else if ("clearPlayer".equals(method)) {
+            PCMPlayer.shared().clear();
+            result.success(true);
+        } else if ("remainingFrames".equals(method)) {
+            result.success(PCMPlayer.shared().remainingFrames());
         }
-
-
         if ("pcm2wav".equals(method)) {
             String pcmPath = call.argument("pcmPath");
             String wavPath = call.argument("wavPath");
@@ -184,8 +195,8 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     }
 
 
-    //设置录音监听
-    public void setPCMRecorderListener() {
+    //设置录音和播放监听
+    public void setPCMListener() {
         PCMRecorder.shared().setRecordListener(new PCMRecordListener());
     }
 
@@ -245,8 +256,20 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 });
             }
         }
+    }
 
+    class PCMPlayerListener implements PlayerListener {
 
+        @Override
+        public void onPlayComplete() {
+            if (playerChannel != null) {
+                uiHandler.post(() -> {
+                    if (playerChannel != null) {
+                        playerChannel.invokeMethod("onPlayComplete", null);
+                    }
+                });
+            }
+        }
     }
 
     abstract static class PermissionCallback {
