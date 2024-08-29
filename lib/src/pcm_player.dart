@@ -19,6 +19,20 @@ class _InnerPCMPlayer {
   bool get isPlayingNow => _isPlayingNow;
   bool _isPlayingNow = false;
 
+  ///因为网络等原因导致接收数据不稳定,播放不连续时,播放静音数据
+  ///[muteTimeMs]播放静音数据的时间 为0表示不播放静音数据
+  ///[maxMuteTimeMs]最多连续播放多久的静音数据
+  ///只在android上有效
+  Future<void> setPlayMuteTime(int muteTimeMs,
+      {int maxMuteTimeMs = 100}) async {
+    if (Platform.isAndroid) {
+      return _channel.invokeMethod("setPlayMuteTime", {
+        "muteTimeMs": muteTimeMs,
+        "maxMuteTimeMs": maxMuteTimeMs,
+      });
+    }
+  }
+
   /**
    * 以Stream方式持续播放PCM数据
    * [data] pcm数据

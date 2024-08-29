@@ -10,6 +10,7 @@ import android.os.Process;
 import android.util.Log;
 
 import com.lianke.BuildConfig;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -59,6 +60,18 @@ public class PCMPlayer {
 
     public boolean hasInit() {
         return mPlayer != null;
+    }
+
+    private int playMuteTime = 0;
+    private int playMuteTimeMax = 0;
+    private int playMuteCount = 0;
+
+    public void setPlayMuteTime(int playMuteTime) {
+        this.playMuteTime = playMuteTime;
+    }
+
+    public void setPlayMuteTimeMax(int playMuteTimeMax) {
+        this.playMuteTimeMax = playMuteTimeMax;
     }
 
     public void setUp(int sampleRateInHz, boolean voiceCall) {
@@ -146,12 +159,19 @@ public class PCMPlayer {
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             while (isPlaying && !Thread.interrupted()) {
                 if (!mSamplesIsEmpty()) {
+                    playMuteCount = 0;
                     ByteBuffer data = mSamplesPop();
                     if (data != null) {
                         data = data.duplicate();
                     }
                     if (data != null && mPlayer != null) {
                         mPlayer.write(data, data.remaining(), AudioTrack.WRITE_BLOCKING);
+                    }
+                } else {
+                    if (mPlayer != null && playMuteTime != 0 && playMuteCount * playMuteTime <= playMuteTimeMax) {
+                        playMuteCount++;
+                        int muteLength = mPlayer.getSampleRate() / 1000 * 2 * playMuteTime;
+                        mPlayer.write(new byte[muteLength], 0, muteLength, AudioTrack.WRITE_NON_BLOCKING);
                     }
                 }
             }
@@ -171,6 +191,7 @@ public class PCMPlayer {
             mPlayer = null;
             print("结束播放");
         }
+        playMuteCount = 0;
         isPlaying = false;
         mSamplesClear();
     }
@@ -188,7 +209,6 @@ public class PCMPlayer {
         if (mPlayer != null && !isPlaying) {
             isPlaying = true;
             mPlayer.play();
-            starPlaybackThread();
             print("开始播放");
         }
     }
@@ -199,6 +219,7 @@ public class PCMPlayer {
             startPlay();
             if (buffer.length > 0) {
                 mSamplesPush(buffer);
+                starPlaybackThread();
             }
         }
     }

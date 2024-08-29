@@ -118,7 +118,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             result.success(checkRecordPermission(applicationContext));
         }
         ///player
-        if ("startPlaying".equals(method)) {
+        else if ("setPlayMuteTime".equals(method)) {
+            int muteTimeMs = call.argument("muteTimeMs");
+            int maxMuteTimeMs = call.argument("maxMuteTimeMs");
+            PCMPlayer.shared().setPlayMuteTime(muteTimeMs);
+            PCMPlayer.shared().setPlayMuteTimeMax(maxMuteTimeMs);
+            result.success(true);
+        } else if ("startPlaying".equals(method)) {
             byte[] data = call.argument("data");
             int sampleRateInHz = call.argument("sampleRateInHz");
             boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
