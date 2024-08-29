@@ -99,7 +99,6 @@ public class PCMRecorder {
                         enableAGC(audioSessionId);
                     }).start();
                 }
-
                 return true;
             }
             mAudioRecord = null;
@@ -141,7 +140,6 @@ public class PCMRecorder {
             public void run() {
                 ///设置优先级
                 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
-
                 int readLength = PRE_READ_LENGTH;
                 byte[] pcmBuffer = new byte[readLength];
                 while (isRecording && !Thread.interrupted() && mAudioRecord != null) {

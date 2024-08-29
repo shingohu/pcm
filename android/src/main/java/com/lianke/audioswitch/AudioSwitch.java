@@ -39,7 +39,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
 
     ///有效的音频输出设备
-    private List<AudioDevice> availableAudioDevices = new CopyOnWriteArrayList<>();
+    private final List<AudioDevice> availableAudioDevices = new CopyOnWriteArrayList<>();
 
     private AudioManager audioManager;
     private Context applicationContext;

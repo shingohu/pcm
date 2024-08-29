@@ -93,9 +93,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 int sampleRateInHz = call.argument("sampleRateInHz");
                 int preFrameSize = call.argument("preFrameSize");
                 boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
-
                 boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
-
                 if (success) {
                     success = PCMRecorder.shared().start();
                     if (success) {
@@ -105,8 +103,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 boolean finalSuccess = success;
                 uiHandler.post(() -> result.success(finalSuccess));
             }).start();
-
-
         } else if ("isRecording".equals(method)) {
             result.success(PCMRecorder.shared().isRecording());
         } else if ("stopRecording".equals(method)) {

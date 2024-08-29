@@ -66,6 +66,8 @@ public class PCMPlayer {
     private int playMuteTimeMax = 0;
     private int playMuteCount = 0;
 
+    private AudioDeviceInfo mPreferredDevice = null;
+
     public void setPlayMuteTime(int playMuteTime) {
         this.playMuteTime = playMuteTime;
     }
@@ -122,6 +124,9 @@ public class PCMPlayer {
                         AudioTrack.MODE_STREAM
                 );
             }
+            if (mPreferredDevice != null) {
+                mPlayer.setPreferredDevice(mPreferredDevice);
+            }
             mSamplesClear();
         }
     }
@@ -133,16 +138,11 @@ public class PCMPlayer {
         return null;
     }
 
-    public AudioDeviceInfo getRoutedDevice() {
-        if (mPlayer != null) {
-            return mPlayer.getRoutedDevice();
-        }
-        return null;
-    }
-
     public void setPreferredDevice(AudioDeviceInfo device) {
         if (mPlayer != null) {
             mPlayer.setPreferredDevice(device);
+        } else {
+            mPreferredDevice = device;
         }
     }
 
@@ -192,6 +192,7 @@ public class PCMPlayer {
             print("结束播放");
         }
         playMuteCount = 0;
+        mPreferredDevice = null;
         isPlaying = false;
         mSamplesClear();
     }
