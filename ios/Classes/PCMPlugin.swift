@@ -117,6 +117,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "setRecordSession"){
             setRecordSession()
             result(true)
+        }else if(method == "setCategory"){
+            setCategory(args: (call.arguments as! Dictionary<String, Any>))
+            result(true)
         }else if(method == "isTelephoneCalling"){
             result(self.isTelephoneCalling())
         }else if(method == "getAvailableAudioDevices"){
@@ -244,6 +247,51 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     
     
+    func setCategory(args:Dictionary<String,Any>){
+        do{
+            let category = indexToCategory(index: args["category"] as? Int)
+            
+            if(category == nil){
+                print("category is not support")
+                return
+            }
+            
+            let modeIndex = args["mode"] as? Int
+            var options = args["options"] as? UInt?
+            if(options == nil){
+                options = 0
+            }
+            let policyIndex = args["policy"] as? Int
+            
+            let mode:AVAudioSession.Mode = indexToMode(index: modeIndex)
+            let policy:AVAudioSession.RouteSharingPolicy? = indexToPolicy(index: policyIndex)
+            
+        
+            let session = AVAudioSession.sharedInstance()
+            
+            if(policy == nil){
+                try session.setCategory(category!, mode: mode, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
+            }else {
+                try session.setCategory(category!, mode: mode, policy: policy!, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
+            }
+            
+            print(session.mode)
+            print(session.category)
+            print(session.categoryOptions.rawValue)
+            
+        }catch {
+            print("setCategory error")
+            print(error)
+        }
+        
+        
+        
+        
+        
+    }
+    
+    
+    
     ///设置录音和播放模式
     func setPlayAndRecordSession(defaultToSpeaker:Bool){
         do{
@@ -251,17 +299,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 return
             }
             let session = AVAudioSession.sharedInstance()
-//            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP])
-//            if(defaultToSpeaker && getAvailableAudioDevices().isEmpty){
-//                try session.overrideOutputAudioPort(.speaker)
-//            }
+            
             if(defaultToSpeaker){
                 try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker])
             }else{
                 try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP])
             }
-            
-            
 //            AVAudioSessionModeVoiceChat，主要用于执行双向语音通信VoIP场景。只能是 AVAudioSessionCategoryPlayAndRecord Category下。在这个模式系统会自动配置AVAudioSessionCategoryOptionAllowBluetooth 这个选项。系统会自动选择最佳的内置麦克风组合支持语音聊天，比如插上耳机就使用耳机上的麦克风进行采集。使用此模式时，该设备的音调君合针对语音进行了优化，并且允许路线组仅缩小为适用于语音聊天的路线。如果应用程序未将其模式设置为其中一个聊天模式（语音，视频或游戏），则AVAudioSessionModeVoiceChat模式将被隐式设置。另一方面，如果应用程序先前已将其类别设置为AVAudioSessionCategoryPlayAndRecord并将其模式设置为AVAudioSessionModeVideoChat或AVAudioSessionModeGameChat，则实例化语音处理I / O音频单元不会导致模式发生更改。
             print("设置音频为播放和录音模式")
         }catch {
@@ -568,6 +611,102 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     public func applicationDidBecomeActive(_ application: UIApplication) {
         notifyAudioDeviceChanged()
     }
+    
+    
+    
+    
+    
+    public func indexToCategory(index:Int?) -> AVAudioSession.Category?{
+        if(index == 0){
+            return AVAudioSession.Category.ambient;
+        }
+        
+        if(index == 1){
+            return AVAudioSession.Category.soloAmbient;
+        }
+        
+        if(index == 2){
+            return AVAudioSession.Category.playback;
+        }
+        
+        if(index == 3){
+            return AVAudioSession.Category.record;
+        }
+        
+        if(index == 4){
+            return AVAudioSession.Category.playAndRecord;
+        }
+        
+        if(index == 5){
+            return AVAudioSession.Category.multiRoute;
+        }
+    
+        return nil
+        
+    }
+    
+    public func indexToMode(index:Int?)->AVAudioSession.Mode{
+        if(index == 0){
+            return AVAudioSession.Mode.default;
+        }
+        if(index == 1){
+            return AVAudioSession.Mode.gameChat;
+        }
+        
+        if(index == 2){
+            return AVAudioSession.Mode.measurement;
+        }
+        
+        if(index == 3){
+            return AVAudioSession.Mode.moviePlayback;
+        }
+        
+        if(index == 4){
+            return AVAudioSession.Mode.spokenAudio;
+        }
+        
+        if(index == 5){
+            return AVAudioSession.Mode.videoChat;
+        }
+        if(index == 6){
+            return AVAudioSession.Mode.videoRecording;
+        }
+        
+        if(index == 7){
+            return AVAudioSession.Mode.voiceChat;
+        }
+        
+        if(index == 8){
+            return AVAudioSession.Mode.voicePrompt;
+        }
+        
+        return AVAudioSession.Mode.default;
+        
+        
+    }
+    
+    public func indexToPolicy(index:Int?)->AVAudioSession.RouteSharingPolicy?{
+        if(index==0){
+            return AVAudioSession.RouteSharingPolicy.default;
+        }
+        
+        if(index==1){
+            return AVAudioSession.RouteSharingPolicy.longFormAudio;
+        }
+        
+        if(index==2){
+            if #available(iOS 13.0, *) {
+                return AVAudioSession.RouteSharingPolicy.longFormVideo
+            }
+        }
+        
+        if(index==3){
+            return AVAudioSession.RouteSharingPolicy.independent;
+        }
+        return nil
+    }
+    
+   
     
 }
 
