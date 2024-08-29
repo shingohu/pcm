@@ -203,18 +203,30 @@ class _AudioManager {
     return await _channel.invokeMethod("abandonAudioFocus");
   }
 
-  ///设置音频模式为通话
+  ///设置音频模式为正常(android)
+  Future<void> setAudioModeNormal() async {
+    await setAndroidAudioMode(AndroidAudioMode.normal);
+  }
+
+  ///设置音频模式为通话模式(android)
   Future<void> setAudioModeInCommunication() async {
+    await setAndroidAudioMode(AndroidAudioMode.inCommunication);
+  }
+
+  ///设置音频模式(android)
+  Future<void> setAndroidAudioMode(AndroidAudioMode mode) async {
     if (Platform.isAndroid) {
-      return await _channel.invokeMethod("setAudioModeInCommunication");
+      await _channel.invokeMethod('setAudioMode', mode.index);
     }
   }
 
-  ///设置音频模式为正常
-  Future<void> setAudioModeNormal() async {
+  ///获取音频模式(android)
+  Future<AndroidAudioMode?> getAndroidAudioMode() async {
     if (Platform.isAndroid) {
-      return await _channel.invokeMethod("setAudioModeNormal");
+      return AndroidAudioMode
+          .values[await _channel.invokeMethod('getAudioMode')];
     }
+    return null;
   }
 
   ///停止蓝牙sco
@@ -345,4 +357,25 @@ class _AudioManager {
     }
     await _channel.invokeMethod("setCurrentAudioDevice", type.index);
   }
+}
+
+class AndroidAudioMode {
+  static const invalid = AndroidAudioMode._(-2);
+  static const current = AndroidAudioMode._(-1);
+  static const normal = AndroidAudioMode._(0);
+  static const ringtone = AndroidAudioMode._(1);
+  static const inCall = AndroidAudioMode._(2);
+  static const inCommunication = AndroidAudioMode._(3);
+  static const values = {
+    -2: invalid,
+    -1: current,
+    0: normal,
+    1: ringtone,
+    2: inCall,
+    3: inCommunication,
+  };
+
+  final int index;
+
+  const AndroidAudioMode._(this.index);
 }

@@ -522,12 +522,14 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
         } else if ("abandonAudioFocus".equals(method)) {
             abandonAudioFocus();
             result.success(true);
-        } else if ("setAudioModeNormal".equals(method)) {
-            new Thread(this::setAudioModeNormal).start();
+        } else if ("getAudioMode".equals(method)) {
+            result.success(getAudioMode());
+        } else if ("setAudioMode".equals(method)) {
+            int mode = (int) call.arguments;
+            setAudioMode(mode);
             result.success(true);
-        } else if ("setAudioModeInCommunication".equals(method)) {
-            new Thread(this::setAudioModeInCommunication).start();
-            result.success(true);
+        } else if ("isSpeakerOn".equals(method)) {
+            result.success(isSpeakerOn());
         } else if ("isTelephoneCalling".equals(method)) {
             result.success(isTelephoneCalling());
         } else if ("isBluetoothScoOn".equals(method)) {
@@ -586,12 +588,33 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 
     //设置正常模式
     public void setAudioModeNormal() {
-
         if (mActivity != null) {
             mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         }
         audioManager.setMode(AudioManager.MODE_NORMAL);
+    }
 
+    public void setAudioMode(int mode) {
+        if (mode == AudioManager.MODE_IN_COMMUNICATION || mode == AudioManager.MODE_IN_CALL) {
+            if (mActivity != null) {
+                mActivity.setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
+            }
+        } else if (mode == AudioManager.MODE_RINGTONE) {
+            if (mActivity != null) {
+                mActivity.setVolumeControlStream(AudioManager.STREAM_RING);
+            }
+        } else {
+            if (mActivity != null) {
+                mActivity.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            }
+        }
+        audioManager.setMode(mode);
+    }
+
+
+    ///Returns the current audio mode
+    public int getAudioMode() {
+        return audioManager.getMode();
     }
 
 
