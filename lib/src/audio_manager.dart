@@ -259,10 +259,15 @@ class _AudioManager {
   ///[defaultToSpeaker] 没有连接其它外设的情况下是否默认输出到喇叭
   Future<void> setPlayAndRecordSession({bool defaultToSpeaker = false}) async {
     if (Platform.isIOS) {
-      ///设置这个之后,iOS当前的路由有可能变化
-      await _channel.invokeMethod("setPlayAndRecordSession", {
-        "defaultToSpeaker": defaultToSpeaker,
-      });
+      List<AVAudioSessionCategoryOptions> options = [
+        AVAudioSessionCategoryOptions.allowBluetooth,
+        AVAudioSessionCategoryOptions.allowBluetoothA2dp,
+      ];
+      if (defaultToSpeaker) {
+        options.add(AVAudioSessionCategoryOptions.defaultToSpeaker);
+      }
+      await setIOSCategory(AVAudioSessionCategory.playAndRecord,
+          mode: AVAudioSessionMode.voiceChat, options: options);
     }
   }
 

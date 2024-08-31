@@ -107,16 +107,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         } else if(method == "requestAudioFocus"){
             requestAudioFocus()
             result(true)
-        }else if(method == "setPlayAndRecordSession"){
-            let defaultToSpeaker:Bool =  (call.arguments as! Dictionary<String, Any>)["defaultToSpeaker"] as! Bool
-            self.setPlayAndRecordSession(defaultToSpeaker: defaultToSpeaker)
-            result(true)
-        }else if(method == "setPlaybackSession"){
-            setPlaybackSession()
-            result(true)
-        }else if(method == "setRecordSession"){
-            setRecordSession()
-            result(true)
         }else if(method == "setCategory"){
             setCategory(args: (call.arguments as! Dictionary<String, Any>))
             result(true)
@@ -250,12 +240,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     func setCategory(args:Dictionary<String,Any>){
         do{
             let category = indexToCategory(index: args["category"] as? Int)
-            
             if(category == nil){
                 print("category is not support")
                 return
             }
-            
             let modeIndex = args["mode"] as? Int
             var options = args["options"] as? UInt?
             if(options == nil){
@@ -265,85 +253,18 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             
             let mode:AVAudioSession.Mode = indexToMode(index: modeIndex)
             let policy:AVAudioSession.RouteSharingPolicy? = indexToPolicy(index: policyIndex)
-            
-        
             let session = AVAudioSession.sharedInstance()
-            
             if(policy == nil){
                 try session.setCategory(category!, mode: mode, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
             }else {
                 try session.setCategory(category!, mode: mode, policy: policy!, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
             }
-            
-            print(session.mode)
-            print(session.category)
-            print(session.categoryOptions.rawValue)
-            
+            print("设置音频会话类型类型\(String(describing: category))")
         }catch {
             print("setCategory error")
             print(error)
         }
-        
-        
-        
-        
-        
     }
-    
-    
-    
-    ///设置录音和播放模式
-    func setPlayAndRecordSession(defaultToSpeaker:Bool){
-        do{
-            if(PCMPlayerClient.shared.isPlaying || PCMRecorderClient.shared.isRecording){
-                return
-            }
-            let session = AVAudioSession.sharedInstance()
-            
-            if(defaultToSpeaker){
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker])
-            }else{
-                try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP])
-            }
-//            AVAudioSessionModeVoiceChat，主要用于执行双向语音通信VoIP场景。只能是 AVAudioSessionCategoryPlayAndRecord Category下。在这个模式系统会自动配置AVAudioSessionCategoryOptionAllowBluetooth 这个选项。系统会自动选择最佳的内置麦克风组合支持语音聊天，比如插上耳机就使用耳机上的麦克风进行采集。使用此模式时，该设备的音调君合针对语音进行了优化，并且允许路线组仅缩小为适用于语音聊天的路线。如果应用程序未将其模式设置为其中一个聊天模式（语音，视频或游戏），则AVAudioSessionModeVoiceChat模式将被隐式设置。另一方面，如果应用程序先前已将其类别设置为AVAudioSessionCategoryPlayAndRecord并将其模式设置为AVAudioSessionModeVideoChat或AVAudioSessionModeGameChat，则实例化语音处理I / O音频单元不会导致模式发生更改。
-            print("设置音频为播放和录音模式")
-        }catch {
-            print("设置音频模式为播放和录音模式失败")
-            print(error)
-        }
-    }
-    
-    
-    
-    ///设置播放模式
-    func setPlaybackSession(){
-        do{
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback)
-            print("设置音频为播放模式")
-        }catch {
-            print("设置音频为播放模式失败")
-            print(error)
-        }
-    }
-    
-    
-    
-    ///设置录音模式
-    func setRecordSession(){
-        do{
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record,options: .allowBluetooth)
-            print("设置音频为录音模式")
-        }catch {
-            print("设置音频为录音模式失败")
-            print(error)
-        }
-    }
-    
-    
-    
-    
     
     
     ///释放音频焦点
@@ -371,6 +292,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }
         
     }
+
     
     
     func isSpeakerOn()->Bool{
