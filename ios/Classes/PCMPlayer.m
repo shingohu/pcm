@@ -170,19 +170,6 @@
                                        sizeof(audioFormat)),
                   "kAudioUnitProperty_StreamFormat of bus 1 failed");
     
-    if(enableAEC){
-        ///0 开启回声消除 默认是开启,所以这里不要动就行了
-        UInt32 echoCancellation = 0;
-        UInt32 size = sizeof(echoCancellation);
-        CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                        kAUVoiceIOProperty_BypassVoiceProcessing,
-                                        kAudioUnitScope_Input,
-                                        0,
-                                        &echoCancellation,
-                                        size),
-                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
-    }
-    
     //禁用录音功能
       UInt32 inputEnableFlag = 0;
       CheckError(AudioUnitSetProperty(_remoteIOUnit,

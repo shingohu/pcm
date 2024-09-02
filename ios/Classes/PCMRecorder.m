@@ -128,20 +128,6 @@
     // 打开AudioUnit
     CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"AudioComponentInstanceNew  failed");
     
-    if(enableAEC){
-        ///0 开启回声消除 默认是开启,所以这里不要动就行了
-        UInt32 echoCancellation = 0;
-        UInt32 size = sizeof(echoCancellation);
-        CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                        kAUVoiceIOProperty_BypassVoiceProcessing,
-                                        kAudioUnitScope_Input,
-                                        0,
-                                        &echoCancellation,
-                                        size),
-                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
-    }
-    
-    
     
 //    Open output of bus 0(output speaker)
     //禁用播放功能

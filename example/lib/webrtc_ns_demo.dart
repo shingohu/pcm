@@ -112,8 +112,8 @@ class _WebrtcNSDemoPageState extends State<WebrtcNSDemoPage> {
 
   Future<void> requestAudioFocus() async {
     if (Platform.isIOS) {
-      await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
-      //await AudioManager.setRecordSession();
+      // await AudioManager.setPlayAndRecordSession(defaultToSpeaker: true);
+      await AudioManager.setIOSCategory(AVAudioSessionCategory.record);
     }
   }
 

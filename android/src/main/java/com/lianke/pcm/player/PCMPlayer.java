@@ -23,7 +23,7 @@ public class PCMPlayer {
 
     private final static String TAG = "PCMPlayer";
 
-    private int MAX_FRAMES_PER_BUFFER = 160;
+    private int MAX_FRAMES_PER_BUFFER = 80;
 
     //=======================AudioTrack Default Settings=======================
     private static final int STREAM_VOICE_CALL = AudioManager.STREAM_VOICE_CALL;
@@ -83,7 +83,6 @@ public class PCMPlayer {
                 stop();
             }
         }
-        MAX_FRAMES_PER_BUFFER = sampleRateInHz / 100 * 2;
         if (mPlayer == null) {
             int mMinBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT));
