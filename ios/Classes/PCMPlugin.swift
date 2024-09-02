@@ -65,6 +65,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+                    if(!PCMRecorderClient.shared.isRecording){
+                        self.requestAudioFocus()
+                    }
                     PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize)
                     PCMRecorderClient.shared.start()
                     result(true)
