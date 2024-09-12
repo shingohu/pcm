@@ -34,23 +34,32 @@
     self = [super init];
     if (self) {
         self->sampleRate = kRate;
-        [self setupRemoteIOUnit:kRate];
     }
     return self;
 }
 
 
 -(void)setUp:(double)sampleRate{
-    self->sampleRate = sampleRate;
+    if(_remoteIOUnit != nil){
+        if(self->sampleRate != sampleRate){
+            [self stop];
+        }
+    }
+    if(_remoteIOUnit == nil){
+        [self setupRemoteIOUnit:sampleRate];
+    }
 }
 
 
 
 - (void)start{
     if(!self.isRunning){
+        self.isRunning = YES;
         NSLog(@"开始录音");
        // long start = [self getNowDateFormatInteger];
-        [self setupRemoteIOUnit:sampleRate];
+        if(_remoteIOUnit == nil){
+            [self setupRemoteIOUnit:sampleRate];
+        }
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
         CheckError(AudioUnitSetProperty(_remoteIOUnit,
@@ -60,15 +69,18 @@
                                             &inputEnableFlag,
                                             sizeof(inputEnableFlag)),
                        "Open input of bus 1 failed");
-        AudioOutputUnitStart(_remoteIOUnit);
-        self.isRunning = YES;
-        // NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
-        
-      
+        bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
+        self.isRunning = !error;
+        if(!self.isRunning){
+            NSLog(@"录音失败");
+            [self stop];
+        }else{
+           // NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        }
     }
 }
 - (void)stop{
-    if(self.isRunning){
+    if(self.isRunning ||_remoteIOUnit!= nil){
         AudioOutputUnitStop(_remoteIOUnit);
         _remoteIOUnit = nil;
         self.isRunning = NO;
@@ -98,26 +110,10 @@
 - (void)setupRemoteIOUnit:(double)sampleRate{
     
     [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
-    
-    
-    
-    OSType subType = kAudioUnitSubType_RemoteIO;
-    
-    
-    BOOL enableAEC = NO;
-    AVAudioSessionCategory category = [[AVAudioSession sharedInstance] category];
-    if(category == AVAudioSessionCategoryPlayAndRecord){
-        enableAEC = YES;
-    }
-    
-    if(enableAEC){
-        subType = kAudioUnitSubType_VoiceProcessingIO;
-    }
-    
-    
+
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
-    inputcd.componentSubType = subType;
+    inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;

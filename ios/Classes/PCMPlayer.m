@@ -54,40 +54,40 @@
 
 
 - (void)start{
-    
-    if(_remoteIOUnit == nil){
-        [self setupRemoteIOUnit:sampleRate];
-    }
-    
-    if(_remoteIOUnit != nil){
+    if(!self.isRunning){
+        NSLog(@"开始播放");
+        self.isRunning = YES;
+       // long start = [self getNowDateFormatInteger];
+        if(_remoteIOUnit == nil){
+            [self setupRemoteIOUnit:sampleRate];
+        }
+        bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
+        self.isRunning = !error;
         if(!self.isRunning){
-            NSLog(@"开始播放");
-            //long start = [self getNowDateFormatInteger];
-            AudioOutputUnitStart(_remoteIOUnit);
-            self.isRunning = YES;
-            //NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
+            NSLog(@"播放失败");
+            [self stop];
+        }else{
+           // NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
         }
     }
+    
 }
 
 - (void)stop{
-    if(_remoteIOUnit != nil){
-        if(self.isRunning){
-            AudioOutputUnitStop(_remoteIOUnit);
-            _remoteIOUnit = nil;
-            self.isRunning = NO;
-            NSLog(@"结束播放");
-        }
+    
+    if(self.isRunning || _remoteIOUnit != nil){
+        CheckError(AudioOutputUnitStop(_remoteIOUnit),"Player AudioOutputUnitStop error");
+        _remoteIOUnit = nil;
+        self.isRunning = NO;
+        NSLog(@"结束播放");
     }
     [self clear];
 }
 
 
 - (void)feed:(NSData *)data{
-    if(_remoteIOUnit != nil){
-        @synchronized (self->mSamples) {
-            [self->mSamples appendData:data];
-        }
+    @synchronized (self->mSamples) {
+        [self->mSamples appendData:data];
     }
 }
 
@@ -132,14 +132,14 @@
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;
-
+    
     
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
-     
+    
     // 打开AudioUnit
     CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"Audio Component Instance New Failed");
     
-
+    
     
     AudioStreamBasicDescription audioFormat;
     
@@ -163,38 +163,38 @@
                "kAudioUnitProperty_StreamFormat of bus 0 failed");
     
     CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                       kAudioUnitProperty_StreamFormat,
-                                       kAudioUnitScope_Output,
-                                       1,
-                                       &audioFormat,
-                                       sizeof(audioFormat)),
-                  "kAudioUnitProperty_StreamFormat of bus 1 failed");
+                                    kAudioUnitProperty_StreamFormat,
+                                    kAudioUnitScope_Output,
+                                    1,
+                                    &audioFormat,
+                                    sizeof(audioFormat)),
+               "kAudioUnitProperty_StreamFormat of bus 1 failed");
     
     //禁用录音功能
-      UInt32 inputEnableFlag = 0;
-      CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                      kAudioOutputUnitProperty_EnableIO,
-                                      kAudioUnitScope_Input,
-                                      1,
-                                      &inputEnableFlag,
-                                      sizeof(inputEnableFlag)),
-                 "Open input of bus 1 failed");
+    UInt32 inputEnableFlag = 0;
+    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                    kAudioOutputUnitProperty_EnableIO,
+                                    kAudioUnitScope_Input,
+                                    1,
+                                    &inputEnableFlag,
+                                    sizeof(inputEnableFlag)),
+               "Open input of bus 1 failed");
     
     
     //启用播放功能
-       UInt32 outputEnableFlag = 1;
-       CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                       kAudioOutputUnitProperty_EnableIO,
-                                       kAudioUnitScope_Output,
-                                       0,
-                                       &outputEnableFlag,
-                                       sizeof(outputEnableFlag)),
-                  "Open output of bus 0 failed");
+    UInt32 outputEnableFlag = 1;
+    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                    kAudioOutputUnitProperty_EnableIO,
+                                    kAudioUnitScope_Output,
+                                    0,
+                                    &outputEnableFlag,
+                                    sizeof(outputEnableFlag)),
+               "Open output of bus 0 failed");
     
     
     
-   
-  
+    
+    
     //音频播放回调
     AURenderCallbackStruct playCallback;
     playCallback.inputProc = _playCallback;
@@ -217,13 +217,13 @@
 - (NSInteger)getNowDateFormatInteger{
     // 创建 NSDate 对象表示当前时间
     NSDate *date = [NSDate date];
-     
+    
     // 将 NSDate 对象转换成时间戳（单位为秒）
     NSTimeInterval timestampInSeconds = [date timeIntervalSince1970];
-     
+    
     // 将时间戳转换成毫秒
     double timestampInMilliseconds = timestampInSeconds * 1000;
-     
+    
     return  timestampInMilliseconds;
 }
 
@@ -249,15 +249,15 @@ static bool CheckError(OSStatus error, const char *operation)
 
 
 OSStatus _playCallback(
-                         void *inRefCon,
-                         AudioUnitRenderActionFlags     *ioActionFlags,
-                         const AudioTimeStamp         *inTimeStamp,
-                         UInt32                         inBusNumber,
-                         UInt32                         inNumberFrames,
-                         AudioBufferList             *ioData)
+                       void *inRefCon,
+                       AudioUnitRenderActionFlags     *ioActionFlags,
+                       const AudioTimeStamp         *inTimeStamp,
+                       UInt32                         inBusNumber,
+                       UInt32                         inNumberFrames,
+                       AudioBufferList             *ioData)
 
 {
-   
+    
     
     PCMPlayer *player = (__bridge PCMPlayer*)inRefCon;
     @synchronized (player->mSamples) {

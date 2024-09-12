@@ -56,18 +56,13 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        
         let method = call.method
-        
-        
         if(method == "startRecording"){
             haseRecordPermission { allow in
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    if(!PCMRecorderClient.shared.isRecording){
-                        self.requestAudioFocus()
-                    }
+                    self.requestAudioFocus()
                     PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize)
                     PCMRecorderClient.shared.start()
                     result(true)
@@ -88,7 +83,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "startPlaying"){
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-            if(!PCMPlayerClient.shared.isPlaying){
+            if(!PCMRecorderClient.shared.isRecording && !PCMPlayerClient.shared.isPlaying ){
                 self.requestAudioFocus()
             }
             PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
@@ -262,7 +257,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             }else {
                 try session.setCategory(category!, mode: mode, policy: policy!, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
             }
-            print("设置音频会话类型类型\(String(describing: category))")
+            print("设置音频会话类型:\(category!)")
         }catch {
             print("setCategory error")
             print(error)
@@ -273,13 +268,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     ///释放音频焦点
     func abandonAudioFocus(){
         do {
-            if(PCMPlayerClient.shared.isPlaying || PCMRecorderClient.shared.isRecording){
-                return ;
-            }
             try AVAudioSession.sharedInstance().setActive(false,options: .notifyOthersOnDeactivation)
             try AVAudioSession.sharedInstance().setCategory(.playback)
         }catch {
-            print("释放音频焦点报错")
+            print("释放音频焦点失败")
             print(error)
         }
     }
@@ -290,7 +282,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             let session = AVAudioSession.sharedInstance()
             try session.setActive(true)
         }catch {
-            print("请求音频焦点报错")
+            print("请求音频焦点失败")
             print(error)
         }
         
