@@ -119,8 +119,8 @@ public class PCMRecorder {
             }
             if (mAudioRecord != null) {
                 isRecording = true;
-                startRecordingRunner();
                 mAudioRecord.startRecording();
+                startRecordingRunner();
                 print("开始录音");
             } else {
                 print("启动录音失败");
@@ -143,6 +143,10 @@ public class PCMRecorder {
                 int readLength = PRE_READ_LENGTH;
                 byte[] pcmBuffer = new byte[readLength];
                 while (isRecording && !Thread.interrupted() && mAudioRecord != null) {
+                    int state = mAudioRecord.getRecordingState();
+                    if (state != AudioRecord.RECORDSTATE_RECORDING) {
+                        continue;
+                    }
                     int readSize = mAudioRecord.read(pcmBuffer, 0, readLength);
                     if (readSize > 0) {
                         try {
@@ -188,8 +192,8 @@ public class PCMRecorder {
 
     public synchronized void stop() {
         if (mAudioRecord != null) {
-            mAudioRecord.stop();
             isRecording = false;
+            mAudioRecord.stop();
         }
         stopRecordingRunner();
         if (mAudioRecord != null) {

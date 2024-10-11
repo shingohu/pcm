@@ -89,20 +89,17 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
                 return;
             }
-            new Thread(() -> {
-                int sampleRateInHz = call.argument("sampleRateInHz");
-                int preFrameSize = call.argument("preFrameSize");
-                boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
-                boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
+            int sampleRateInHz = call.argument("sampleRateInHz");
+            int preFrameSize = call.argument("preFrameSize");
+            boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
+            boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
+            if (success) {
+                success = PCMRecorder.shared().start();
                 if (success) {
-                    success = PCMRecorder.shared().start();
-                    if (success) {
-                        audioSwitch.requestAudioFocus();
-                    }
+                    audioSwitch.requestAudioFocus();
                 }
-                boolean finalSuccess = success;
-                uiHandler.post(() -> result.success(finalSuccess));
-            }).start();
+            }
+            result.success(success);
         } else if ("isRecording".equals(method)) {
             result.success(PCMRecorder.shared().isRecording());
         } else if ("stopRecording".equals(method)) {
