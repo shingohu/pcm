@@ -69,6 +69,7 @@
                                             &inputEnableFlag,
                                             sizeof(inputEnableFlag)),
                        "Open input of bus 1 failed");
+        CheckError(AudioUnitInitialize(_remoteIOUnit),"Recorder AudioUnitInitialize error");
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
         self.isRunning = !error;
         if(!self.isRunning){
@@ -81,7 +82,9 @@
 }
 - (void)stop{
     if(self.isRunning ||_remoteIOUnit!= nil){
+        AudioUnitUninitialize(_remoteIOUnit);
         AudioOutputUnitStop(_remoteIOUnit);
+        AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
         self.isRunning = NO;
         self.audioCallBack(nil);

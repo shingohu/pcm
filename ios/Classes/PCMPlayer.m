@@ -61,6 +61,7 @@
         if(_remoteIOUnit == nil){
             [self setupRemoteIOUnit:sampleRate];
         }
+        CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
         self.isRunning = !error;
         if(!self.isRunning){
@@ -76,7 +77,9 @@
 - (void)stop{
     
     if(self.isRunning || _remoteIOUnit != nil){
+        AudioUnitUninitialize(_remoteIOUnit);
         CheckError(AudioOutputUnitStop(_remoteIOUnit),"Player AudioOutputUnitStop error");
+        AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
         self.isRunning = NO;
         NSLog(@"结束播放");
