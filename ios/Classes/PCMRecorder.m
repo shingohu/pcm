@@ -18,6 +18,7 @@
     AudioUnit _remoteIOUnit;
     AudioStreamBasicDescription _streamFormat;
     double sampleRate;
+    bool enableAEC;
 }
 
 + (instancetype)shared{
@@ -34,19 +35,22 @@
     self = [super init];
     if (self) {
         self->sampleRate = kRate;
+        self->enableAEC = YES;
     }
     return self;
 }
 
 
--(void)setUp:(double)sampleRate{
+-(void)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
     if(_remoteIOUnit != nil){
-        if(self->sampleRate != sampleRate){
+        if(self->sampleRate != sampleRate || self->enableAEC != enableAEC){
             [self stop];
         }
     }
+    self->sampleRate = sampleRate;
+    self->enableAEC = enableAEC;
     if(_remoteIOUnit == nil){
-        [self setupRemoteIOUnit:sampleRate];
+        [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
     }
 }
 
@@ -58,7 +62,7 @@
         NSLog(@"开始录音");
        // long start = [self getNowDateFormatInteger];
         if(_remoteIOUnit == nil){
-            [self setupRemoteIOUnit:sampleRate];
+            [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
         }
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
@@ -110,13 +114,17 @@
 
 
 
-- (void)setupRemoteIOUnit:(double)sampleRate{
+- (void)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
     
     [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
 
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
-    inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    if(enableAEC){
+        inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    }else{
+        inputcd.componentSubType = kAudioUnitSubType_RemoteIO;
+    }
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;

@@ -62,8 +62,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+                    let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
                     self.requestAudioFocus()
-                    PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize)
+                    PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
                     PCMRecorderClient.shared.start()
                     result(true)
                 }else{
@@ -285,11 +286,8 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             print("请求音频焦点失败")
             print(error)
         }
-        
     }
 
-    
-    
     func isSpeakerOn()->Bool{
         let session = AVAudioSession.sharedInstance()
         var speakerOn = false

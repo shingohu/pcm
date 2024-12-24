@@ -16,8 +16,6 @@
     AudioUnit _remoteIOUnit;
     double sampleRate ;
     NSMutableData* mSamples;
-    AVAudioSessionCategory category;
-    
 }
 
 + (instancetype)shared{
@@ -42,8 +40,6 @@
 - (void)setUp:(double)sampleRate{
     if(_remoteIOUnit != nil){
         if(self->sampleRate != sampleRate){
-            [self stop];
-        }else if(self->category != [[AVAudioSession sharedInstance] category]){
             [self stop];
         }
     }
@@ -78,7 +74,7 @@
     
     if(self.isRunning || _remoteIOUnit != nil){
         AudioUnitUninitialize(_remoteIOUnit);
-        CheckError(AudioOutputUnitStop(_remoteIOUnit),"Player AudioOutputUnitStop error");
+        AudioOutputUnitStop(_remoteIOUnit);
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
         self.isRunning = NO;
@@ -95,7 +91,6 @@
 }
 
 - (NSInteger)remainingFrames{
-    
     NSUInteger count = 0;
     @synchronized (self ->mSamples) {
         count = [self->mSamples length];
@@ -114,24 +109,10 @@
 - (void)setupRemoteIOUnit:(double)sampleRate{
     self->sampleRate = sampleRate;
     [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
-    
-    
-    OSType subType = kAudioUnitSubType_RemoteIO;
-    
-    
-    BOOL enableAEC = NO;
-    AVAudioSessionCategory category = [[AVAudioSession sharedInstance] category];
-    if(category == AVAudioSessionCategoryPlayAndRecord){
-        enableAEC = YES;
-    }
-    if(enableAEC){
-        subType = kAudioUnitSubType_VoiceProcessingIO;
-    }
-    self->category = category;
     //Create nodes and add to the graph
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
-    inputcd.componentSubType = subType;
+    inputcd.componentSubType = kAudioUnitSubType_RemoteIO;
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;
     inputcd.componentFlags = 0;

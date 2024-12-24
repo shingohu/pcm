@@ -26,6 +26,7 @@ class PCMRecorderClient {
     ///需要读取的每帧大小
     private var PRE_FRAME_SIZE:Int = 160
     private var samplateRate:Int = 8000
+    private var enableAEC:Bool = true
     public var isRecording = false
     
     ///音频缓冲
@@ -40,16 +41,16 @@ class PCMRecorderClient {
     
     public func initRecorder(onAudioCallback:OnAudioCallback?){
         self.onAudioCallback = onAudioCallback
-        PCMRecorder.shared().setUp(Double(samplateRate))
     }
     
     
-    func setUp(samplateRate:Int,preFrameSize:Int) {
+    func setUp(samplateRate:Int,preFrameSize:Int,enableAEC:Bool) {
         if(!isRecording){
             self.PRE_FRAME_SIZE = preFrameSize
-            if(self.samplateRate != samplateRate){
+            if(self.samplateRate != samplateRate || self.enableAEC != enableAEC){
                 self.samplateRate = samplateRate
-                PCMRecorder.shared().setUp(Double(samplateRate))
+                self.enableAEC = enableAEC
+                PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
             }
         }
     }

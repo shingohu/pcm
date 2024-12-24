@@ -271,6 +271,15 @@ class _AudioManager {
     }
   }
 
+  ///判断其他应用是否正在播放音频
+  ///仅iOS有效
+  Future<bool?> isOtherAudioPlaying() async {
+    if (Platform.isIOS) {
+      return await _channel.invokeMethod("isOtherAudioPlaying");
+    }
+    return null;
+  }
+
   ///蓝牙sco是否已开启
   Future<bool> get isBluetoothScoOn async {
     if (Platform.isAndroid) {
