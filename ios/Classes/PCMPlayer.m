@@ -108,7 +108,6 @@
 
 - (void)setupRemoteIOUnit:(double)sampleRate{
     self->sampleRate = sampleRate;
-    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
     //Create nodes and add to the graph
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;

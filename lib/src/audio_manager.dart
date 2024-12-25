@@ -236,38 +236,51 @@ class _AudioManager {
     }
   }
 
-  ///设置iOS音频模式
-  Future<void> setIOSCategory(AVAudioSessionCategory category,
-      {AVAudioSessionMode? mode,
-      List<AVAudioSessionCategoryOptions>? options,
-      AVAudioSessionRouteSharingPolicy? policy}) async {
+  ///设置iOS音频类型
+  Future<void> setIOSCategory(IOSAudioSessionCategory category,
+      {IOSAudioSessionMode? mode,
+      IOSAudioSessionCategoryOptions? options,
+      IOSAudioSessionRouteSharingPolicy? policy}) async {
     if (Platform.isIOS) {
-      int option = 0;
-      options?.forEach((o) {
-        option = o.value | option;
-      });
       await _channel.invokeMethod("setCategory", {
         "category": category.index,
         "mode": mode?.index,
-        "options": option,
+        "options": options?.value,
         "policy": policy?.index,
       });
     }
+  }
+
+  ///获取当前iOS的音频类型
+  Future<IOSAudioSessionCategory?> getIOSCategory() async {
+    if (Platform.isIOS) {
+      return IOSAudioSessionCategory
+          .values[await _channel.invokeMethod("getCategory")];
+    }
+    return null;
+  }
+
+  ///获取当前iOS的音频选项
+  Future<IOSAudioSessionCategoryOptions?> getIOSCategoryOptions() async {
+    if (Platform.isIOS) {
+      return IOSAudioSessionCategoryOptions(
+          await _channel.invokeMethod("getCategoryOptions"));
+    }
+    return null;
   }
 
   ///设置录音和播放模式
   ///[defaultToSpeaker] 没有连接其它外设的情况下是否默认输出到喇叭
   Future<void> setPlayAndRecordSession({bool defaultToSpeaker = false}) async {
     if (Platform.isIOS) {
-      List<AVAudioSessionCategoryOptions> options = [
-        AVAudioSessionCategoryOptions.allowBluetooth,
-        AVAudioSessionCategoryOptions.allowBluetoothA2dp,
-      ];
+      IOSAudioSessionCategoryOptions options =
+          IOSAudioSessionCategoryOptions.allowBluetooth |
+              IOSAudioSessionCategoryOptions.allowBluetoothA2dp;
       if (defaultToSpeaker) {
-        options.add(AVAudioSessionCategoryOptions.defaultToSpeaker);
+        options = options | IOSAudioSessionCategoryOptions.defaultToSpeaker;
       }
-      await setIOSCategory(AVAudioSessionCategory.playAndRecord,
-          mode: AVAudioSessionMode.voiceChat, options: options);
+      await setIOSCategory(IOSAudioSessionCategory.playAndRecord,
+          mode: IOSAudioSessionMode.defaultMode, options: options);
     }
   }
 
@@ -398,7 +411,7 @@ class AndroidAudioMode {
 }
 
 /// The categories for [AVAudioSession].
-enum AVAudioSessionCategory {
+enum IOSAudioSessionCategory {
   ambient,
   soloAmbient,
   playback,
@@ -408,50 +421,50 @@ enum AVAudioSessionCategory {
 }
 
 /// The category options for [AVAudioSession].
-class AVAudioSessionCategoryOptions {
-  static const AVAudioSessionCategoryOptions none =
-      AVAudioSessionCategoryOptions(0);
-  static const AVAudioSessionCategoryOptions mixWithOthers =
-      AVAudioSessionCategoryOptions(0x1);
-  static const AVAudioSessionCategoryOptions duckOthers =
-      AVAudioSessionCategoryOptions(0x2);
-  static const AVAudioSessionCategoryOptions
+class IOSAudioSessionCategoryOptions {
+  static const IOSAudioSessionCategoryOptions none =
+      IOSAudioSessionCategoryOptions(0);
+  static const IOSAudioSessionCategoryOptions mixWithOthers =
+      IOSAudioSessionCategoryOptions(0x1);
+  static const IOSAudioSessionCategoryOptions duckOthers =
+      IOSAudioSessionCategoryOptions(0x2);
+  static const IOSAudioSessionCategoryOptions
       interruptSpokenAudioAndMixWithOthers =
-      AVAudioSessionCategoryOptions(0x11);
-  static const AVAudioSessionCategoryOptions allowBluetooth =
-      AVAudioSessionCategoryOptions(0x4);
-  static const AVAudioSessionCategoryOptions allowBluetoothA2dp =
-      AVAudioSessionCategoryOptions(0x20);
-  static const AVAudioSessionCategoryOptions allowAirPlay =
-      AVAudioSessionCategoryOptions(0x40);
-  static const AVAudioSessionCategoryOptions defaultToSpeaker =
-      AVAudioSessionCategoryOptions(0x8);
+      IOSAudioSessionCategoryOptions(0x11);
+  static const IOSAudioSessionCategoryOptions allowBluetooth =
+      IOSAudioSessionCategoryOptions(0x4);
+  static const IOSAudioSessionCategoryOptions allowBluetoothA2dp =
+      IOSAudioSessionCategoryOptions(0x20);
+  static const IOSAudioSessionCategoryOptions allowAirPlay =
+      IOSAudioSessionCategoryOptions(0x40);
+  static const IOSAudioSessionCategoryOptions defaultToSpeaker =
+      IOSAudioSessionCategoryOptions(0x8);
 
   final int value;
 
-  const AVAudioSessionCategoryOptions(this.value);
+  const IOSAudioSessionCategoryOptions(this.value);
 
-  AVAudioSessionCategoryOptions operator |(
-          AVAudioSessionCategoryOptions option) =>
-      AVAudioSessionCategoryOptions(value | option.value);
+  IOSAudioSessionCategoryOptions operator |(
+          IOSAudioSessionCategoryOptions option) =>
+      IOSAudioSessionCategoryOptions(value | option.value);
 
-  AVAudioSessionCategoryOptions operator &(
-          AVAudioSessionCategoryOptions option) =>
-      AVAudioSessionCategoryOptions(value & option.value);
+  IOSAudioSessionCategoryOptions operator &(
+          IOSAudioSessionCategoryOptions option) =>
+      IOSAudioSessionCategoryOptions(value & option.value);
 
-  bool contains(AVAudioSessionCategoryOptions options) =>
+  bool contains(IOSAudioSessionCategoryOptions options) =>
       options.value & value == options.value;
 
   @override
   bool operator ==(Object other) =>
-      other is AVAudioSessionCategoryOptions && value == other.value;
+      other is IOSAudioSessionCategoryOptions && value == other.value;
 
   @override
   int get hashCode => value.hashCode;
 }
 
 /// The modes for [AVAudioSession].
-enum AVAudioSessionMode {
+enum IOSAudioSessionMode {
   defaultMode,
   gameChat,
   measurement,
@@ -464,7 +477,7 @@ enum AVAudioSessionMode {
 }
 
 /// The route sharing policies for [AVAudioSession].
-enum AVAudioSessionRouteSharingPolicy {
+enum IOSAudioSessionRouteSharingPolicy {
   defaultPolicy,
   longFormAudio,
   longFormVideo,

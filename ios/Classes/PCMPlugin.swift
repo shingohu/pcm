@@ -63,6 +63,17 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
                     let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
+                    
+                    let session = AVAudioSession.sharedInstance()
+                    if(session.category != .playAndRecord && session.category != .record){
+                        do {
+                            print("录音时没有设置录音模式,重新设置")
+                            try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker])
+                        }catch {
+                            print(error)
+                            print("设置音频模式失败")
+                        }
+                    }
                     self.requestAudioFocus()
                     PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
                     PCMRecorderClient.shared.start()
@@ -84,6 +95,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "startPlaying"){
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            let session = AVAudioSession.sharedInstance()
+            if(session.category == .record){
+                print("当前为仅录音模式,不可进行播放")
+                result(false)
+                return
+            }
             if(!PCMRecorderClient.shared.isRecording && !PCMPlayerClient.shared.isPlaying ){
                 self.requestAudioFocus()
             }
@@ -109,6 +126,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "setCategory"){
             setCategory(args: (call.arguments as! Dictionary<String, Any>))
             result(true)
+        }else if(method == "getCategory"){
+            result(getCategory())
+        }else if(method == "getCategoryOptions"){
+            result(getCategoryOptions())
         }else if(method == "isTelephoneCalling"){
             result(self.isTelephoneCalling())
         }else if(method == "getAvailableAudioDevices"){
@@ -253,6 +274,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             let mode:AVAudioSession.Mode = indexToMode(index: modeIndex)
             let policy:AVAudioSession.RouteSharingPolicy? = indexToPolicy(index: policyIndex)
             let session = AVAudioSession.sharedInstance()
+            
+            
+            if(session.category == category && session.categoryOptions == AVAudioSession.CategoryOptions(rawValue: options! ?? 0) && session.mode == mode){
+                return
+            }
+
             if(policy == nil){
                 try session.setCategory(category!, mode: mode, options: AVAudioSession.CategoryOptions(rawValue: options! ?? 0))
             }else {
@@ -265,12 +292,49 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }
     }
     
+    func getCategory() ->Int{
+        let session = AVAudioSession.sharedInstance()
+        return categoryToFlutter(category: session.category)
+    }
+    
+    
+    func getCategoryOptions()->UInt{
+        let session = AVAudioSession.sharedInstance()
+        return session.categoryOptions.rawValue
+    }
+    
+    
+    
+    
+    func categoryToFlutter(category:AVAudioSession.Category) ->Int {
+        if(category == .ambient){
+            return 0
+        }
+        
+        if(category == .soloAmbient){
+            return 1
+        }
+        
+        if(category == .playback){
+            return 2
+        }
+        
+        if(category == .record){
+            return 3
+        }
+        
+        if(category == .playAndRecord){
+            return 4
+        }
+        return 5
+    }
+    
+    
     
     ///释放音频焦点
     func abandonAudioFocus(){
         do {
             try AVAudioSession.sharedInstance().setActive(false,options: .notifyOthersOnDeactivation)
-            try AVAudioSession.sharedInstance().setCategory(.playback)
         }catch {
             print("释放音频焦点失败")
             print(error)

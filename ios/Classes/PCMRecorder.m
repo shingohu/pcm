@@ -115,9 +115,6 @@
 
 
 - (void)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
-    
-    [[AVAudioSession sharedInstance] setPreferredSampleRate:sampleRate error:nil];
-
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
     if(enableAEC){
