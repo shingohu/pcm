@@ -62,7 +62,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
+                    var enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
                     
                     let session = AVAudioSession.sharedInstance()
                     if(session.category != .playAndRecord && session.category != .record){
@@ -71,14 +71,25 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                             try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker])
                         }catch {
                             print(error)
-                            print("设置音频模式失败")
+                            print("设置音频录音和播放模式失败")
+                            result(false)
+                            return
                         }
                     }
-                    self.requestAudioFocus()
-                    PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
-                    PCMRecorderClient.shared.start()
-                    result(true)
+                    
+                    if(enableAEC && session.category == .record){
+                        enableAEC = false
+                    }
+                    var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
+                    if(success){
+                        success =  PCMRecorderClient.shared.start()
+                    }
+                    if(!success){
+                        print("录音失败")
+                    }
+                    result(success)
                 }else{
+                    print("没有录音权限")
                     result(false)
                 }
             }
@@ -92,6 +103,14 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }else if(method == "checkRecordPermission"){
             requestRecordPermission(result: result)
         }
+        
+        
+        else if(method == "setUpPlayer"){
+            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
+            result(true)
+        }
+
         else if(method == "startPlaying"){
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
@@ -101,13 +120,13 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(false)
                 return
             }
-            if(!PCMRecorderClient.shared.isRecording && !PCMPlayerClient.shared.isPlaying ){
-                self.requestAudioFocus()
-            }
             PCMPlayerClient.shared.setUp(samplateRate: sampleRateInHz)
             PCMPlayerClient.shared.feed(audio: data.data)
             result(true)
-        }else if(method == "isPlaying"){
+        }else if(method == "pausePlaying"){
+            PCMPlayer.shared().pause()
+            result(true)
+        }   else if(method == "isPlaying"){
             result(PCMPlayerClient.shared.isPlaying)
         }else if(method == "stopPlaying"){
             PCMPlayerClient.shared.stop()

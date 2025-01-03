@@ -17,14 +17,6 @@ dependencies:
   flutter:
     sdk: flutter
   oktoast: ^3.4.0
-  webrtc_ns:
-    git:
-      url: "https://github.com/shingohu/webrtc_ns"
-      ref: '0.0.2'
-  webrtc_agc:
-    git:
-      url: "https://github.com/shingohu/webrtc_agc"
-      ref: '0.0.2'
   pcm:
     # When depending on this package from a real application you should use:
     #   pcm: ^x.y.z

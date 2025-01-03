@@ -19,7 +19,7 @@ class _InnerPCMRecorder {
    * 开始录音
    * [sampleRateInHz] 录音频率
    * [preFrameSize]回调数据大小,注意不要太小,否则可能播放不流畅
-   * [enableAEC]是否开启回音消除（only android）(部分设备上可能存在音量变小的情况)
+   * [enableAEC]是否开启回音消除(部分设备上可能存在音量变小的情况),iOS开启回声消除会导致启MIC耗时
    * 开启时Android上采用VOICE_COMMUNICATION录音,关闭时使用MIC录音
    * [onData] 音频数据回调
    */
@@ -58,6 +58,7 @@ class _InnerPCMRecorder {
         .map((buffer) => buffer as Uint8List?);
 
     _pcmStream.listen((data) {
+      _onAudioCallback?.call(data);
       if (data == null) {
         isRecordingNow = false;
         if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
@@ -67,7 +68,6 @@ class _InnerPCMRecorder {
       } else {
         isRecordingNow = true;
       }
-      _onAudioCallback?.call(data);
     });
   }
 

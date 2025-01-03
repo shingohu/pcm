@@ -10,6 +10,7 @@ import android.os.Process;
 import android.util.Log;
 
 import com.lianke.BuildConfig;
+import com.lianke.pcm.util.Util;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -53,28 +54,25 @@ public class PCMPlayer {
     private volatile boolean isPlaying = false;
 
 
-    ///是否正在播放
+    /// 是否正在播放
     public boolean isPlaying() {
         return isPlaying;
     }
+
+    private PlayerListener playerListener = null;
+
 
     public boolean hasInit() {
         return mPlayer != null;
     }
 
-    private int playMuteTime = 0;
-    private int playMuteTimeMax = 0;
-    private int playMuteCount = 0;
+
+
+    public void setPlayerListener(PlayerListener playerListener) {
+        this.playerListener = playerListener;
+    }
 
     private AudioDeviceInfo mPreferredDevice = null;
-
-    public void setPlayMuteTime(int playMuteTime) {
-        this.playMuteTime = playMuteTime;
-    }
-
-    public void setPlayMuteTimeMax(int playMuteTimeMax) {
-        this.playMuteTimeMax = playMuteTimeMax;
-    }
 
     public void setUp(int sampleRateInHz, boolean voiceCall) {
         int streamType = voiceCall ? STREAM_VOICE_CALL : STREAM_MUSIC;
@@ -153,12 +151,12 @@ public class PCMPlayer {
         if (mPlayer == null) {
             return;
         }
+        print("开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             while (isPlaying && !Thread.interrupted()) {
                 if (!mSamplesIsEmpty()) {
-                    playMuteCount = 0;
                     ByteBuffer data = mSamplesPop();
                     if (data != null) {
                         data = data.duplicate();
@@ -166,33 +164,43 @@ public class PCMPlayer {
                     if (data != null && mPlayer != null) {
                         mPlayer.write(data, data.remaining(), AudioTrack.WRITE_BLOCKING);
                     }
-                } else {
-                    if (mPlayer != null && playMuteTime != 0 && playMuteCount * playMuteTime <= playMuteTimeMax) {
-                        playMuteCount++;
-                        int muteLength = mPlayer.getSampleRate() / 1000 * 2 * playMuteTime;
-                        mPlayer.write(new byte[muteLength], 0, muteLength, AudioTrack.WRITE_NON_BLOCKING);
-                    }
                 }
+
             }
         });
         mAudioPlayingRunner.setPriority(Thread.MAX_PRIORITY);
         mAudioPlayingRunner.start();
     }
 
+
+    /// 结束播放
     public void stop() {
-        if (mPlayer != null) {
-            mPlayer.stop();
-            isPlaying = false;
-        }
         stopPlaybackThread();
         if (mPlayer != null) {
+            mPlayer.flush();
             mPlayer.release();
             mPlayer = null;
-            print("结束播放");
         }
-        playMuteCount = 0;
+        if (isPlaying) {
+            isPlaying = false;
+            print("结束播放" + mSamplesRemainingFrames());
+        }
         mPreferredDevice = null;
-        isPlaying = false;
+        mSamplesClear();
+    }
+
+
+    /// 暂停播放
+    public void pause() {
+        stopPlaybackThread();
+        if (mPlayer != null && isPlaying) {
+            mPlayer.pause();
+            mPlayer.flush();
+        }
+        if (isPlaying) {
+            isPlaying = false;
+            print("结束播放" + mSamplesRemainingFrames());
+        }
         mSamplesClear();
     }
 
@@ -209,7 +217,6 @@ public class PCMPlayer {
         if (mPlayer != null && !isPlaying) {
             isPlaying = true;
             mPlayer.play();
-            print("开始播放");
         }
     }
 
@@ -237,9 +244,7 @@ public class PCMPlayer {
 
 
     private static void print(String msg) {
-        if (BuildConfig.DEBUG) {
-            Log.e(TAG, msg);
-        }
+        Util.print(msg);
     }
 
     private void mSamplesClear() {

@@ -23,9 +23,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (instancetype)shared;
 
 
-- (void)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC;
+- (BOOL)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC;
 
-- (void)start;
+- (BOOL)start;
 - (void)stop;
 
 

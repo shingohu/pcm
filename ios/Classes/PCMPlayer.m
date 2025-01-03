@@ -38,10 +38,8 @@
 
 
 - (void)setUp:(double)sampleRate{
-    if(_remoteIOUnit != nil){
-        if(self->sampleRate != sampleRate){
-            [self stop];
-        }
+    if(_remoteIOUnit != nil && self->sampleRate != sampleRate){
+        [self stop];
     }
     if(_remoteIOUnit == nil){
         [self setupRemoteIOUnit:sampleRate];
@@ -51,32 +49,35 @@
 
 - (void)start{
     if(!self.isRunning){
-        NSLog(@"开始播放");
-        self.isRunning = YES;
-       // long start = [self getNowDateFormatInteger];
         if(_remoteIOUnit == nil){
             [self setupRemoteIOUnit:sampleRate];
         }
-        CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
-        self.isRunning = !error;
-        if(!self.isRunning){
+        if(error){
             NSLog(@"播放失败");
-            [self stop];
         }else{
-           // NSLog(@"开始播放耗时%ld",(long)([self getNowDateFormatInteger] - start));
+            NSLog(@"开始播放");
+            self.isRunning = YES;
         }
     }
-    
+}
+
+-(void)pause{
+    if(self.isRunning){
+        bool error = CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
+        self.isRunning = NO;
+        [self clear];
+        NSLog(@"结束播放");
+    }
 }
 
 - (void)stop{
-    
-    if(self.isRunning || _remoteIOUnit != nil){
+    if(_remoteIOUnit != nil){
         AudioUnitUninitialize(_remoteIOUnit);
-        AudioOutputUnitStop(_remoteIOUnit);
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
+    }
+    if(self.isRunning){
         self.isRunning = NO;
         NSLog(@"结束播放");
     }
@@ -145,50 +146,20 @@
                                     sizeof(audioFormat)),
                "kAudioUnitProperty_StreamFormat of bus 0 failed");
     
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioUnitProperty_StreamFormat,
-                                    kAudioUnitScope_Output,
-                                    1,
-                                    &audioFormat,
-                                    sizeof(audioFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 1 failed");
-    
-    //禁用录音功能
-    UInt32 inputEnableFlag = 0;
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioOutputUnitProperty_EnableIO,
-                                    kAudioUnitScope_Input,
-                                    1,
-                                    &inputEnableFlag,
-                                    sizeof(inputEnableFlag)),
-               "Open input of bus 1 failed");
-    
-    
-    //启用播放功能
-    UInt32 outputEnableFlag = 1;
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioOutputUnitProperty_EnableIO,
-                                    kAudioUnitScope_Output,
-                                    0,
-                                    &outputEnableFlag,
-                                    sizeof(outputEnableFlag)),
-               "Open output of bus 0 failed");
-    
-    
-    
-    
-    
     //音频播放回调
     AURenderCallbackStruct playCallback;
     playCallback.inputProc = _playCallback;
     playCallback.inputProcRefCon = (__bridge void *)(self);
     CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                     kAudioUnitProperty_SetRenderCallback,
-                                    kAudioUnitScope_Input,
+                                    kAudioUnitScope_Global,
                                     0,
                                     &playCallback,
                                     sizeof(playCallback)),
                "kAudioUnitProperty_SetRenderCallback failed");
+    
+    
+    CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
     
     
 }

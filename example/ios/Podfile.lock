@@ -2,32 +2,20 @@ PODS:
   - Flutter (1.0.0)
   - pcm (0.0.1):
     - Flutter
-  - webrtc_agc (0.0.1):
-    - Flutter
-  - webrtc_ns (0.0.1):
-    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
-  - webrtc_agc (from `.symlinks/plugins/webrtc_agc/ios`)
-  - webrtc_ns (from `.symlinks/plugins/webrtc_ns/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
   pcm:
     :path: ".symlinks/plugins/pcm/ios"
-  webrtc_agc:
-    :path: ".symlinks/plugins/webrtc_agc/ios"
-  webrtc_ns:
-    :path: ".symlinks/plugins/webrtc_ns/ios"
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
-  webrtc_agc: d7a2e3beb1772f277cb2d23dbf8bc91f8ee06fff
-  webrtc_ns: 5f0acf51762b7f36b26c5869fe1ec01bb239aab3
 
 PODFILE CHECKSUM: c4c93c5f6502fe2754f48404d3594bf779584011
 

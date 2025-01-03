@@ -15,6 +15,7 @@ import android.util.Log;
 import android.os.Process;
 
 import com.lianke.BuildConfig;
+import com.lianke.pcm.util.Util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -93,15 +94,14 @@ public class PCMRecorder {
             if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
                 if (enableAEC) {
                     int audioSessionId = mAudioRecord.getAudioSessionId();
-                    new Thread(() -> {
-                        enableAEC(audioSessionId);
-                        enableNS(audioSessionId);
-                        enableAGC(audioSessionId);
-                    }).start();
+                    enableAEC(audioSessionId);
+                    enableNS(audioSessionId);
+                    enableAGC(audioSessionId);
                 }
                 return true;
             }
             mAudioRecord = null;
+            print("初始化录音失败");
             return false;
         }
 
@@ -133,7 +133,7 @@ public class PCMRecorder {
         return isRecording;
     }
 
-    ///启动录音线程
+    /// 启动录音线程
     private void startRecordingRunner() {
         mAudioHandleRunner = new Thread() {
             @Override
@@ -191,13 +191,12 @@ public class PCMRecorder {
     }
 
     public synchronized void stop() {
-        if (mAudioRecord != null) {
+        if (mAudioRecord != null && isRecording) {
             isRecording = false;
             mAudioRecord.stop();
         }
         stopRecordingRunner();
         if (mAudioRecord != null) {
-            isRecording = false;
             mAudioRecord.release();
             mAudioRecord = null;
             print("结束录音");
@@ -214,7 +213,8 @@ public class PCMRecorder {
                     .create(audioSessionId);
             if (acousticEchoCanceler != null) {
                 int resultCode = acousticEchoCanceler.setEnabled(true);
-                if (AudioEffect.SUCCESS == resultCode) {
+                if (AudioEffect.SUCCESS != resultCode) {
+                    print("enable aec failed");
                 }
             }
         }
@@ -230,7 +230,8 @@ public class PCMRecorder {
                     .create(audioSessionId);
             if (noiseSuppressor != null) {
                 int resultCode = noiseSuppressor.setEnabled(true);
-                if (AudioEffect.SUCCESS == resultCode) {
+                if (AudioEffect.SUCCESS != resultCode) {
+                    print("enable ns failed");
                 }
             }
         }
@@ -246,15 +247,14 @@ public class PCMRecorder {
                     .create(audioSessionId);
             if (agc != null) {
                 int resultCode = agc.setEnabled(true);
-                if (AudioEffect.SUCCESS == resultCode) {
+                if (AudioEffect.SUCCESS != resultCode) {
+                    print("enable agc failed");
                 }
             }
         }
     }
 
-    private void print(String msg) {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, msg);
-        }
+    private static void print(String msg) {
+        Util.print(msg);
     }
 }

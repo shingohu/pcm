@@ -1,5 +1,7 @@
 package com.lianke.pcm.util;
 
+import android.util.Log;
+
 import com.lianke.pcm.adpcm.Adpcm;
 
 import java.io.File;
@@ -139,14 +141,14 @@ public class Util {
     /**
      * PCM文件转WAV文件
      *
-     * @param inAdPcmFilePath  输入ADPCM文件路径
-     * @param outWavFilePath 输出WAV文件路径
-     * @param sampleRate     采样率，例如44100
-     * @param channels       声道数 单声道：1或双声道：2
-     * @param bitNum         采样位数，8或16
+     * @param inAdPcmFilePath 输入ADPCM文件路径
+     * @param outWavFilePath  输出WAV文件路径
+     * @param sampleRate      采样率，例如44100
+     * @param channels        声道数 单声道：1或双声道：2
+     * @param bitNum          采样位数，8或16
      */
     public static void adpcmFile2wav(String inAdPcmFilePath, String outWavFilePath, int sampleRate,
-                               int channels, int bitNum) {
+                                     int channels, int bitNum) {
         try {
             FileInputStream fileInputStream = new FileInputStream(inAdPcmFilePath);
             byte[] byteArray = new byte[fileInputStream.available()];
@@ -166,8 +168,7 @@ public class Util {
             fileOutputStream.close();
 
 
-            pcm2wav(inAdPcmFilePath,outWavFilePath,sampleRate,channels,bitNum);
-
+            pcm2wav(inAdPcmFilePath, outWavFilePath, sampleRate, channels, bitNum);
 
 
         } catch (IOException e) {
@@ -193,5 +194,13 @@ public class Util {
         return byteValue;
     }
 
+    public static boolean enableLog = true;
+
+    /// 打印日志
+    public static void print(String msg) {
+        if (enableLog) {
+            Log.d("[PCM]" + "[" + System.currentTimeMillis() + "]", msg);
+        }
+    }
 
 }

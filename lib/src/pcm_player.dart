@@ -5,6 +5,11 @@ import 'package:flutter/services.dart';
 final _InnerPCMPlayer PCMPlayer = _InnerPCMPlayer._();
 
 class _InnerPCMPlayer {
+  final _channel = const MethodChannel('pcm/player');
+
+  bool get isPlayingNow => _isPlayingNow;
+  bool _isPlayingNow = false;
+
   _InnerPCMPlayer._() {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
@@ -14,27 +19,26 @@ class _InnerPCMPlayer {
     });
   }
 
-  final _channel = const MethodChannel('pcm/player');
-
-  bool get isPlayingNow => _isPlayingNow;
-  bool _isPlayingNow = false;
-
-  ///因为网络等原因导致接收数据不稳定,播放不连续时,播放静音数据
-  ///[muteTimeMs]播放静音数据的时间 为0表示不播放静音数据
-  ///[maxMuteTimeMs]最多连续播放多久的静音数据
-  ///只在android上有效
-  Future<void> setPlayMuteTime(int muteTimeMs,
-      {int maxMuteTimeMs = 100}) async {
-    if (Platform.isAndroid) {
-      return _channel.invokeMethod("setPlayMuteTime", {
-        "muteTimeMs": muteTimeMs,
-        "maxMuteTimeMs": maxMuteTimeMs,
-      });
+  ///初始化播放器
+  ///[sampleRateInHz]采样率
+  ///[voiceCall]stream type is voice call?（only android）,一般需要配合audio mode一起使用
+  ///[feedThreshold]feed when below 8000 queued frames
+  Future<void> setUp({
+    int sampleRateInHz = 8000,
+    bool voiceCall = false,
+  }) async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
     }
+    return _channel.invokeMethod("setUpPlayer", {
+      "sampleRateInHz": sampleRateInHz,
+      "voiceCall": voiceCall,
+    });
   }
 
   /**
    * 以Stream方式持续播放PCM数据
+   * 如果播放器未初始化,会自动初始化
    * [data] pcm数据
    * [sampleRateInHz]采样率
    * [voiceCall]stream type is voice call?（only android）,一般需要配合audio mode一起使用
@@ -54,12 +58,13 @@ class _InnerPCMPlayer {
     });
   }
 
-  ///是否正在播放
-  Future<bool> get isPlaying async {
+  ///暂停播放(不销毁播放器)
+  Future<void> pause() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
-      return false;
+      return;
     }
-    return await _channel.invokeMethod("isPlaying");
+    await _channel.invokeMethod("pausePlaying");
+    _isPlayingNow = false;
   }
 
   ///结束播放(销毁播放器)
@@ -71,12 +76,20 @@ class _InnerPCMPlayer {
     _isPlayingNow = false;
   }
 
-  ///清空播放器
+  ///清空播放数据
   Future<void> clear() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
     await _channel.invokeMethod("clearPlayer");
+  }
+
+  ///是否正在播放
+  Future<bool> get isPlaying async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return false;
+    }
+    return await _channel.invokeMethod("isPlaying");
   }
 
   ///剩余播放帧长度

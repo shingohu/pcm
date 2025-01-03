@@ -86,6 +86,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
         if ("startRecording".equals(method)) {
             if (!checkRecordPermission(applicationContext)) {
+                Util.print("没有录音权限");
                 result.success(false);
                 return;
             }
@@ -95,9 +96,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
             if (success) {
                 success = PCMRecorder.shared().start();
-                if (success) {
-                    audioSwitch.requestAudioFocus();
-                }
             }
             result.success(success);
         } else if ("isRecording".equals(method)) {
@@ -111,22 +109,20 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             result.success(checkRecordPermission(applicationContext));
         }
         ///player
-        else if ("setPlayMuteTime".equals(method)) {
-            int muteTimeMs = call.argument("muteTimeMs");
-            int maxMuteTimeMs = call.argument("maxMuteTimeMs");
-            PCMPlayer.shared().setPlayMuteTime(muteTimeMs);
-            PCMPlayer.shared().setPlayMuteTimeMax(maxMuteTimeMs);
+        else if ("setUpPlayer".equals(method)) {
+            int sampleRateInHz = call.argument("sampleRateInHz");
+            boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
+            PCMPlayer.shared().setUp(sampleRateInHz, voiceCall);
             result.success(true);
         } else if ("startPlaying".equals(method)) {
             byte[] data = call.argument("data");
             int sampleRateInHz = call.argument("sampleRateInHz");
             boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
-            boolean needRequestAudioFocus = !PCMPlayer.shared().hasInit() || !PCMPlayer.shared().isPlaying();
             PCMPlayer.shared().setUp(sampleRateInHz, voiceCall);
             PCMPlayer.shared().feed(data);
-            if (needRequestAudioFocus) {
-                audioSwitch.requestAudioFocus();
-            }
+            result.success(true);
+        } else if ("pausePlaying".equals(method)) {
+            PCMPlayer.shared().pause();
             result.success(true);
         } else if ("isPlaying".equals(method)) {
             result.success(PCMPlayer.shared().isPlaying());
@@ -170,6 +166,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                         });
                     }
             ).start();
+        } else if ("enableLog".equals(method)) {
+            Util.enableLog = call.argument("enableLog");
+            result.success(true);
         }
     }
 
@@ -197,6 +196,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     //设置录音和播放监听
     public void setPCMListener() {
         PCMRecorder.shared().setRecordListener(new PCMRecordListener());
+        PCMPlayer.shared().setPlayerListener(new PCMPlayerListener());
     }
 
     @Override
@@ -260,11 +260,11 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     class PCMPlayerListener implements PlayerListener {
 
         @Override
-        public void onPlayComplete() {
+        public void onFeedCallback(long remainingFrames) {
             if (playerChannel != null) {
                 uiHandler.post(() -> {
                     if (playerChannel != null) {
-                        playerChannel.invokeMethod("onPlayComplete", null);
+                        playerChannel.invokeMethod("onFeedCallback", remainingFrames);
                     }
                 });
             }

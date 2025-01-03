@@ -13,18 +13,10 @@ packages:
     dependency: transitive
     description:
       name: collection
-      sha256: ee67cb0715911d28db6bf4af1026078bd6f0128b07a5f66fb2ed94ec6783c09a
+      sha256: a1ace0a119f20aabc852d165077c036cd864315bd99b7eaa10a60100341941bf
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "1.18.0"
-  ffi:
-    dependency: transitive
-    description:
-      name: ffi
-      sha256: "493f37e7df1804778ff3a53bd691d8692ddf69702cf4c1c1096a2e41b4779e21"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.1.2"
+    version: "1.19.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -61,19 +53,11 @@ packages:
       relative: true
     source: path
     version: "0.0.1"
-  plugin_platform_interface:
-    dependency: transitive
-    description:
-      name: plugin_platform_interface
-      sha256: "4820fbfdb9478b1ebae27888254d445073732dae3d6ea81f0b7e06d5dedc3f02"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "2.1.8"
   sky_engine:
     dependency: transitive
     description: flutter
     source: sdk
-    version: "0.0.99"
+    version: "0.0.0"
   vector_math:
     dependency: transitive
     description:
@@ -82,24 +66,6 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.1.4"
-  webrtc_agc:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: "0.0.2"
-      resolved-ref: b780cf19cb6776a9b6fec16a7315bb800d73fd23
-      url: "https://github.com/shingohu/webrtc_agc"
-    source: git
-    version: "0.0.1"
-  webrtc_ns:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: "0.0.2"
-      resolved-ref: "75ecd6015eb8da3f312c30e31ebed3895051e8ab"
-      url: "https://github.com/shingohu/webrtc_ns"
-    source: git
-    version: "0.0.1"
 sdks:
-  dart: ">=3.4.3 <4.0.0"
+  dart: ">=3.4.0 <4.0.0"
   flutter: ">=3.7.0"

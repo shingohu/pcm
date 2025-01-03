@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
-import 'package:pcm_example/audio_output_demo.dart';
-
-import 'webrtc_agc_demo.dart';
-import 'webrtc_ns_demo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,29 +34,31 @@ class _MyAppState extends State<MyApp> {
                 child: Column(
                   children: [
                     TextButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .push(MaterialPageRoute(builder: (ctx) {
-                            return AudioOutputDemoPage();
-                          }));
+                        onPressed: () async {
+                          await PCMRecorder.requestRecordPermission();
+                          int start = DateTime.now().millisecondsSinceEpoch;
+                          int i = 0;
+                          PCMRecorder.start(
+                              enableAEC: false,
+                              preFrameSize: 160,
+                              onData: (data) {
+                                if (i == 0) {
+                                  i = 1;
+                                  print(
+                                      "第一帧耗时:${DateTime.now().millisecondsSinceEpoch - start}");
+                                }
+                                if (data != null) {
+                                  PCMPlayer.play(data);
+                                }
+                              });
                         },
-                        child: Text("音频输出设备测试")),
+                        child: Text("开始录音")),
                     TextButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .push(MaterialPageRoute(builder: (ctx) {
-                            return WebrtcNSDemoPage();
-                          }));
+                        onPressed: () async {
+                          await PCMRecorder.stop();
+                          await PCMPlayer.stop();
                         },
-                        child: Text("降噪测试")),
-                    TextButton(
-                        onPressed: () {
-                          Navigator.of(context)
-                              .push(MaterialPageRoute(builder: (ctx) {
-                            return WebrtcAGCDemoPage();
-                          }));
-                        },
-                        child: Text("自动增益测试")),
+                        child: Text("结束录音")),
                   ],
                 ),
               ),

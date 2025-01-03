@@ -29,11 +29,13 @@ class PCMPlayerClient {
         PCMPlayer.shared().setUp(Double(samplateRate));
     }
     
-    
-    
   
     func start() {
         PCMPlayer.shared().start()
+    }
+    
+    func pause(){
+        PCMPlayer.shared().pause()
     }
     
     

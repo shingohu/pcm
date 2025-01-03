@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)setUp:(double)sampleRate;
 - (void)start;
+- (void)pause;
 - (void)stop;
 
 - (void)clear;

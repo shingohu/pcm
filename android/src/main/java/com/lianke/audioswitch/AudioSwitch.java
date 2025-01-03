@@ -21,6 +21,7 @@ import androidx.annotation.NonNull;
 
 
 import com.lianke.pcm.player.PCMPlayer;
+import com.lianke.pcm.util.Util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,7 +67,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 //            @Override
 //            public void onReceive(Context context, Intent intent) {
 //                int state = intent.getIntExtra("state", -1);
-//                Log.e(TAG, "耳机状态->" + state);
+//                Util.print(TAG, "耳机状态->" + state);
 //                enumerateDevices();
 //            }
 //        }, intentFilter);
@@ -363,14 +364,14 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
 //            } else {
 //                audioManager.setSpeakerphoneOn(true);
 //            }
-//            //  Log.e("AudioManager", "打开扬声器");
+//            //  Util.print("AudioManager", "打开扬声器");
 //        } else {
 //            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 //                audioManager.clearCommunicationDevice();
 //            } else {
 //                audioManager.setSpeakerphoneOn(false);
 //            }
-//            // Log.e("AudioManager", "关闭扬声器");
+//            // Util.print("AudioManager", "关闭扬声器");
 //        }
     }
 
@@ -416,7 +417,7 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
             } else {
                 audioManager.stopBluetoothSco();
             }
-            Log.e("AudioManager", "停止SCO");
+            Util.print("停止SCO");
         } else {
             unRegisterSco();
         }
@@ -448,29 +449,29 @@ public class AudioSwitch implements MethodChannel.MethodCallHandler {
                         if (scoAudioState == AudioManager.SCO_AUDIO_STATE_CONNECTED) {
                             audioManager.setBluetoothScoOn(true);
                             setScoState(BluetoothScoState.CONNECTED);
-                            Log.e("AudioManager", "SCO已开启");
+                            Util.print("SCO已开启");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_DISCONNECTED) {
                             if (scoState == BluetoothScoState.CONNECTED) {
                                 audioManager.setBluetoothScoOn(false);
                                 audioManager.stopBluetoothSco();
                                 unRegisterSco();
                                 setScoState(BluetoothScoState.DISCONNECTED);
-                                Log.e("AudioManager", "SCO已断开");
+                                Util.print("SCO已断开");
                             } else if (scoState == BluetoothScoState.CONNECTING) {
                                 audioManager.setBluetoothScoOn(false);
                                 audioManager.stopBluetoothSco();
                                 unRegisterSco();
                                 setScoState(BluetoothScoState.ERROR);
-                                Log.e("AudioManager", "SCO开启失败");
+                                Util.print("SCO开启失败");
                             }
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_ERROR) {
                             audioManager.setBluetoothScoOn(false);
                             audioManager.stopBluetoothSco();
                             unRegisterSco();
                             setScoState(BluetoothScoState.ERROR);
-                            Log.e("AudioManager", "SCO开启失败");
+                            Util.print("SCO开启失败");
                         } else if (scoAudioState == AudioManager.SCO_AUDIO_STATE_CONNECTING) {
-                            Log.e("AudioManager", "SCO开启中");
+                            Util.print("SCO开启中");
                             setScoState(BluetoothScoState.CONNECTING);
                         }
 

@@ -44,24 +44,24 @@ class PCMRecorderClient {
     }
     
     
-    func setUp(samplateRate:Int,preFrameSize:Int,enableAEC:Bool) {
+    func setUp(samplateRate:Int,preFrameSize:Int,enableAEC:Bool)->Bool {
         if(!isRecording){
             self.PRE_FRAME_SIZE = preFrameSize
             if(self.samplateRate != samplateRate || self.enableAEC != enableAEC){
                 self.samplateRate = samplateRate
                 self.enableAEC = enableAEC
-                PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
+                return PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
             }
         }
+        return true
     }
     
     ///开始录制
-    func start() {
+    func start()->Bool {
         if(!isRecording){
-            isRecording = true
-            //self.startReadNexPCMDataRunner()
-            PCMRecorder.shared().start()
+            isRecording =  PCMRecorder.shared().start()
         }
+        return isRecording
     }
     
     ///停止录制
@@ -84,13 +84,7 @@ class PCMRecorderClient {
             readNextPCMData()
         }
     }
-    
-    private func startReadNexPCMDataRunner(){
-        DispatchQueue.global(qos: .userInteractive ).async {
-            self.readNextPCMDataInRunner()
-        }
-    }
-    
+        
     
     private func readNextPCMData(){
         
@@ -112,26 +106,7 @@ class PCMRecorderClient {
     
     
     
-    private func readNextPCMDataInRunner(){
-        while self.isRecording {
-            let length = audioBuffer.count
-            var readLength = 0 ;
-            if(length - readPCMDataIndex >= PRE_FRAME_SIZE ){
-                readLength = PRE_FRAME_SIZE;
-            }
-            if(readLength  != 0){
-                let data =  audioBuffer.subdata(in: readPCMDataIndex..<(readPCMDataIndex+readLength))
-                if(self.onAudioCallback != nil){
-                    self.onAudioCallback!(data)
-                }
-                readPCMDataIndex += readLength
-            }else{
-                ///这里不sleep下 在release模式下会卡住,不知道为什么
-                Thread.sleep(forTimeInterval: 0.001)
-            }
-        }
-        resetWhenStop()
-    }
+    
     
     private func resetWhenStop(){
         ///结束录制

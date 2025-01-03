@@ -41,55 +41,70 @@
 }
 
 
--(void)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
-    if(_remoteIOUnit != nil){
-        if(self->sampleRate != sampleRate || self->enableAEC != enableAEC){
-            [self stop];
-        }
+-(BOOL)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
+    if(_remoteIOUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
+        [self stop];
     }
     self->sampleRate = sampleRate;
     self->enableAEC = enableAEC;
     if(_remoteIOUnit == nil){
-        [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
+        return [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
     }
+    return YES;
 }
 
 
 
-- (void)start{
+- (BOOL)start{
     if(!self.isRunning){
-        self.isRunning = YES;
-        NSLog(@"开始录音");
        // long start = [self getNowDateFormatInteger];
         if(_remoteIOUnit == nil){
-            [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
+            if( ! [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC] ){
+                return NO;
+            }
         }
+        
+        BOOL error = NO;
+        
+       
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
-        CheckError(AudioUnitSetProperty(_remoteIOUnit,
+        error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                             kAudioOutputUnitProperty_EnableIO,
                                             kAudioUnitScope_Input,
                                             1,
                                             &inputEnableFlag,
                                             sizeof(inputEnableFlag)),
                        "Open input of bus 1 failed");
-        CheckError(AudioUnitInitialize(_remoteIOUnit),"Recorder AudioUnitInitialize error");
-        bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
-        self.isRunning = !error;
-        if(!self.isRunning){
-            NSLog(@"录音失败");
-            [self stop];
-        }else{
-           // NSLog(@"开始录音耗时%ld",(long)([self getNowDateFormatInteger] - start));
+        if(error){
+            return  NO;
         }
+        
+        error = CheckError(AudioUnitInitialize(_remoteIOUnit),"Recorder AudioUnitInitialize error");
+        
+        if(error){
+            return  NO;
+        }
+        error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
+        if(error){
+            return  NO;
+        }
+        self.isRunning = YES;
+        NSLog(@"开始录音");
     }
+    return YES;
 }
 - (void)stop{
-    if(self.isRunning ||_remoteIOUnit!= nil){
+    
+    
+    if(_remoteIOUnit!= nil){
         AudioUnitUninitialize(_remoteIOUnit);
         AudioOutputUnitStop(_remoteIOUnit);
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
+    }
+    
+    if(self.isRunning){
         self.isRunning = NO;
         self.audioCallBack(nil);
         NSLog(@"结束录音");
@@ -114,7 +129,10 @@
 
 
 
-- (void)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
+- (BOOL)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
+    
+    BOOL error = NO;
+    
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
     if(enableAEC){
@@ -130,22 +148,10 @@
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
      
     // 打开AudioUnit
-    CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"AudioComponentInstanceNew  failed");
-    
-    
-//    Open output of bus 0(output speaker)
-    //禁用播放功能
-    UInt32 outputEnableFlag = 0;
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                    kAudioOutputUnitProperty_EnableIO,
-                                    kAudioUnitScope_Output,
-                                    0,
-                                    &outputEnableFlag,
-                                    sizeof(outputEnableFlag)),
-               "Open output of bus 0 failed");
-    
-    
-    
+    error = CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"AudioComponentInstanceNew  failed");
+    if(error){
+        return NO;
+    }
     
     
     AudioStreamBasicDescription audioFormat;
@@ -160,14 +166,8 @@
     audioFormat.mBitsPerChannel = kBits;
     audioFormat.mChannelsPerFrame = kChannels;
      
-     CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                     kAudioUnitProperty_StreamFormat,
-                                     kAudioUnitScope_Input,
-                                     0,
-                                     &audioFormat,
-                                     sizeof(audioFormat)),
-                "kAudioUnitProperty_StreamFormat of bus 0 failed");
-     CheckError(AudioUnitSetProperty(_remoteIOUnit,
+    
+    error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                      kAudioUnitProperty_StreamFormat,
                                      kAudioUnitScope_Output,
                                      1,
@@ -176,6 +176,33 @@
                 "kAudioUnitProperty_StreamFormat of bus 1 failed");
     
     
+    if(error){
+        return NO;
+    }
+    
+//    if(enableAEC){
+//        UInt32 echoCancellation = 1;
+//        UInt32 size = sizeof(echoCancellation);
+//        CheckError(AudioUnitSetProperty(_remoteIOUnit,
+//                                        kAUVoiceIOProperty_BypassVoiceProcessing,
+//                                        kAudioUnitScope_Input,
+//                                        0,
+//                                        &echoCancellation,
+//                                        size),
+//                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
+//    }
+    
+    //    Open output of bus 0(output speaker)
+        //禁用播放功能
+        UInt32 outputEnableFlag = 0;
+        CheckError(AudioUnitSetProperty(_remoteIOUnit,
+                                        kAudioOutputUnitProperty_EnableIO,
+                                        kAudioUnitScope_Output,
+                                        0,
+                                        &outputEnableFlag,
+                                        sizeof(outputEnableFlag)),
+                   "Open output of bus 0 failed");
+
     
    
   
@@ -183,13 +210,18 @@
     AURenderCallbackStruct recordCallback;
     recordCallback.inputProc = _recordCallback;
     recordCallback.inputProcRefCon = (__bridge void *)(self);
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+    error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                 kAudioOutputUnitProperty_SetInputCallback,
-                                    kAudioUnitScope_Output,
+                                    kAudioUnitScope_Global,
                                     1,
                                     &recordCallback,
                                     sizeof(recordCallback)),
                "couldnt set remote i/o render callback for output");
+    if(error){
+        return NO;
+    }
+    
+    return YES;
 }
 
 
@@ -207,7 +239,6 @@ static bool CheckError(OSStatus error, const char *operation)
         // No, format it as an integer
         sprintf(errorString, "%d", (int)error);
     fprintf(stderr, "Error: %s (%s)\n", operation, errorString);
-    exit(1);
     return YES;
 }
 
