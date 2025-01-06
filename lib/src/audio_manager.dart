@@ -279,8 +279,10 @@ class _AudioManager {
       if (defaultToSpeaker) {
         options = options | IOSAudioSessionCategoryOptions.defaultToSpeaker;
       }
+
+      ///注意这里必须使用voiceChat 否则在后台无法播放,原因未知
       await setIOSCategory(IOSAudioSessionCategory.playAndRecord,
-          mode: IOSAudioSessionMode.defaultMode, options: options);
+          mode: IOSAudioSessionMode.voiceChat, options: options);
     }
   }
 

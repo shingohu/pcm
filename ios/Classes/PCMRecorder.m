@@ -207,7 +207,6 @@ static bool CheckError(OSStatus error, const char *operation)
         // No, format it as an integer
         sprintf(errorString, "%d", (int)error);
     fprintf(stderr, "Error: %s (%s)\n", operation, errorString);
-    exit(1);
     return YES;
 }
 
