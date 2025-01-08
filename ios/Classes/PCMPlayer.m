@@ -6,6 +6,7 @@
 //
 
 #import "PCMPlayer.h"
+#import "Log.h"
 
 #define kRate 8000 //采样率
 #define kChannels   (1)//声道数
@@ -18,14 +19,6 @@
     NSMutableData* mSamples;
 }
 
-+ (instancetype)shared{
-    static PCMPlayer *AudioPlayer = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        AudioPlayer = [[self alloc] init];
-    });
-    return AudioPlayer;
-}
 - (instancetype)init
 {
     self = [super init];
@@ -48,15 +41,14 @@
 
 
 - (void)start{
-    if(!self.isRunning){
-        if(_remoteIOUnit == nil){
-            [self setupRemoteIOUnit:sampleRate];
-        }
+    if(!self.isRunning && _remoteIOUnit != nil){
+        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:nil];
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
         if(error){
-            NSLog(@"播放失败");
+            [self stop];
+            [self printLog:@"播放失败"];
         }else{
-            NSLog(@"开始播放");
+            [self printLog:@"开始播放"];
             self.isRunning = YES;
         }
     }
@@ -64,24 +56,33 @@
 
 -(void)pause{
     if(self.isRunning){
-        bool error = CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
+        CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
         self.isRunning = NO;
         [self clear];
-        NSLog(@"结束播放");
+        [self printLog:@"结束播放"];
     }
 }
 
 - (void)stop{
     if(_remoteIOUnit != nil){
+        if(self.isRunning){
+            CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
+        }
         AudioUnitUninitialize(_remoteIOUnit);
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
     }
     if(self.isRunning){
         self.isRunning = NO;
-        NSLog(@"结束播放");
+        [self printLog:@"结束播放"];
     }
     [self clear];
+}
+
+
+
+-(void)printLog:(NSString*)log{
+    [Log print:log];
 }
 
 
@@ -216,6 +217,7 @@ OSStatus _playCallback(
     PCMPlayer *player = (__bridge PCMPlayer*)inRefCon;
     @synchronized (player->mSamples) {
         NSUInteger bytesToCopy = MIN(ioData->mBuffers[0].mDataByteSize, [player->mSamples length]);
+        //NSLog(@"获取长度 %u",(unsigned int)ioData->mBuffers[0].mDataByteSize);
         if(bytesToCopy>0){
             // provide samples
             memcpy(ioData->mBuffers[0].mData, [player->mSamples bytes], bytesToCopy);

@@ -6,12 +6,14 @@
 //
 
 #import "PCMRecorder.h"
+#import "Log.h"
 
 
 
 #define kRate 8000 //采样率
 #define kChannels   (1)//声道数
 #define kBits       (16)//位数
+
 
 @implementation PCMRecorder
 {
@@ -57,16 +59,10 @@
 
 - (BOOL)start{
     if(!self.isRunning){
-       // long start = [self getNowDateFormatInteger];
-        if(_remoteIOUnit == nil){
-            if( ! [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC] ){
-                return NO;
-            }
-        }
+        
+        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:nil];
         
         BOOL error = NO;
-        
-       
             //启用录音功能(提前设置这个会导致请求录音权限)
         UInt32 inputEnableFlag = 1;
         error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
@@ -79,36 +75,40 @@
         if(error){
             return  NO;
         }
-        
         error = CheckError(AudioUnitInitialize(_remoteIOUnit),"Recorder AudioUnitInitialize error");
-        
         if(error){
             return  NO;
         }
         error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
         if(error){
+            [self stop];
             return  NO;
         }
+        
         self.isRunning = YES;
-        NSLog(@"开始录音");
+        [self printLog:@"开始录音"];
     }
     return YES;
 }
 - (void)stop{
-    
-    
     if(_remoteIOUnit!= nil){
+        if(self.isRunning){
+            AudioOutputUnitStop(_remoteIOUnit);
+        }
         AudioUnitUninitialize(_remoteIOUnit);
-        AudioOutputUnitStop(_remoteIOUnit);
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
     }
-    
     if(self.isRunning){
         self.isRunning = NO;
         self.audioCallBack(nil);
-        NSLog(@"结束录音");
+        [self printLog:@"结束录音"];
     }
+}
+
+
+-(void)printLog:(NSString*)log{
+    [Log print:log];
 }
 
 
@@ -180,17 +180,6 @@
         return NO;
     }
     
-//    if(enableAEC){
-//        UInt32 echoCancellation = 1;
-//        UInt32 size = sizeof(echoCancellation);
-//        CheckError(AudioUnitSetProperty(_remoteIOUnit,
-//                                        kAUVoiceIOProperty_BypassVoiceProcessing,
-//                                        kAudioUnitScope_Input,
-//                                        0,
-//                                        &echoCancellation,
-//                                        size),
-//                   "AudioUnitSetProperty kAUVoiceIOProperty_BypassVoiceProcessing failed");
-//    }
     
     //    Open output of bus 0(output speaker)
         //禁用播放功能
@@ -220,7 +209,6 @@
     if(error){
         return NO;
     }
-    
     return YES;
 }
 
@@ -268,6 +256,7 @@ OSStatus _recordCallback(void *inRefCon,
         {
             AudioBuffer buffer = bufferList.mBuffers[0];
             NSData *pcmBlock =[NSData dataWithBytes:buffer.mData length:buffer.mDataByteSize];
+            //NSLog(@"获取长度 %lu",(unsigned long)pcmBlock.length);
             audioRecorder.audioCallBack(pcmBlock);
         }
     }

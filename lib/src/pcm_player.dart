@@ -1,78 +1,96 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
-final _InnerPCMPlayer PCMPlayer = _InnerPCMPlayer._();
+const _uuid = Uuid();
+const _channel = const MethodChannel('com.lianke.pcm');
 
-class _InnerPCMPlayer {
-  final _channel = const MethodChannel('pcm/player');
-
+class PCMPlayer {
   bool get isPlayingNow => _isPlayingNow;
   bool _isPlayingNow = false;
 
-  _InnerPCMPlayer._() {
-    if (!Platform.isIOS && !Platform.isAndroid) {
-      return;
+  final String playerId;
+  bool _dispose = false;
+
+  PCMPlayer({String? playerId, int? sampleRateInHz})
+      : playerId = playerId ?? _uuid.v4() {
+    if (sampleRateInHz != null) {
+      setUp(sampleRateInHz: sampleRateInHz);
     }
-    isPlaying.then((isPlaying) {
-      _isPlayingNow = isPlaying;
-    });
   }
 
   ///初始化播放器
   ///[sampleRateInHz]采样率
-  ///[voiceCall]stream type is voice call?（only android）,一般需要配合audio mode一起使用
-  ///[feedThreshold]feed when below 8000 queued frames
   Future<void> setUp({
     int sampleRateInHz = 8000,
-    bool voiceCall = false,
   }) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
+    _dispose = false;
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
-      "voiceCall": voiceCall,
+      "playerId": playerId,
     });
+  }
+
+  ///开始播放
+  Future<void> play() async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
+    }
+    if (_dispose) {
+      return;
+    }
+    _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
+          "playerId": playerId,
+        }) ??
+        false;
   }
 
   /**
    * 以Stream方式持续播放PCM数据
-   * 如果播放器未初始化,会自动初始化
-   * [data] pcm数据
-   * [sampleRateInHz]采样率
-   * [voiceCall]stream type is voice call?（only android）,一般需要配合audio mode一起使用
-   * true: STREAM_VOICE_CALL Used to identify the volume of audio streams for phone calls
-   * false: STREAM_MUSIC Used to identify the volume of audio streams for music playback
    */
-  Future<void> play(Uint8List data,
-      {int sampleRateInHz = 8000, bool voiceCall = false}) async {
+  Future<void> feed(Uint8List data) async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    _isPlayingNow = true;
-    return _channel.invokeMethod("startPlaying", {
+    if (_dispose) {
+      return;
+    }
+    return _channel.invokeMethod("feedPlaying", {
       "data": data,
-      "sampleRateInHz": sampleRateInHz,
-      "voiceCall": voiceCall,
+      "playerId": playerId,
     });
   }
 
-  ///暂停播放(不销毁播放器)
-  Future<void> pause() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
-      return;
-    }
-    await _channel.invokeMethod("pausePlaying");
-    _isPlayingNow = false;
-  }
-
-  ///结束播放(销毁播放器)
+  ///停止播放(不销毁播放器)
   Future<void> stop() async {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    await _channel.invokeMethod("stopPlaying");
+    if (_dispose) {
+      return;
+    }
+    await _channel.invokeMethod("pausePlaying", {
+      "playerId": playerId,
+    });
+    _isPlayingNow = false;
+    _dispose = true;
+  }
+
+  ///结束播放(销毁播放器)
+  Future<void> release() async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return;
+    }
+    if (_dispose) {
+      return;
+    }
+    await _channel.invokeMethod("stopPlaying", {
+      "playerId": playerId,
+    });
     _isPlayingNow = false;
   }
 
@@ -81,7 +99,9 @@ class _InnerPCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return;
     }
-    await _channel.invokeMethod("clearPlayer");
+    await _channel.invokeMethod("clearPlaying", {
+      "playerId": playerId,
+    });
   }
 
   ///是否正在播放
@@ -89,7 +109,9 @@ class _InnerPCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return false;
     }
-    return await _channel.invokeMethod("isPlaying");
+    return await _channel.invokeMethod("isPlaying", {
+      "playerId": playerId,
+    });
   }
 
   ///剩余播放帧长度
@@ -97,6 +119,8 @@ class _InnerPCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid) {
       return 0;
     }
-    return await _channel.invokeMethod("remainingFrames");
+    return await _channel.invokeMethod("remainingFrames", {
+      "playerId": playerId,
+    });
   }
 }

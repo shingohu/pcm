@@ -2,20 +2,26 @@ PODS:
   - Flutter (1.0.0)
   - pcm (0.0.1):
     - Flutter
+  - record_darwin (1.0.0):
+    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
+  - record_darwin (from `.symlinks/plugins/record_darwin/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
   pcm:
     :path: ".symlinks/plugins/pcm/ios"
+  record_darwin:
+    :path: ".symlinks/plugins/record_darwin/ios"
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
+  record_darwin: 3b1a8e7d5c0cbf45ad6165b4d83a6ca643d929c3
 
 PODFILE CHECKSUM: c4c93c5f6502fe2754f48404d3594bf779584011
 

@@ -41,17 +41,16 @@ class PCMRecorderClient {
     
     public func initRecorder(onAudioCallback:OnAudioCallback?){
         self.onAudioCallback = onAudioCallback
+        self.setUp(samplateRate: samplateRate, preFrameSize: PRE_FRAME_SIZE, enableAEC: enableAEC)
     }
     
     
     func setUp(samplateRate:Int,preFrameSize:Int,enableAEC:Bool)->Bool {
         if(!isRecording){
             self.PRE_FRAME_SIZE = preFrameSize
-            if(self.samplateRate != samplateRate || self.enableAEC != enableAEC){
-                self.samplateRate = samplateRate
-                self.enableAEC = enableAEC
-                return PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
-            }
+            self.samplateRate = samplateRate
+            self.enableAEC = enableAEC
+            return PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
         }
         return true
     }

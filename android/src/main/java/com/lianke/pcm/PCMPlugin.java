@@ -16,15 +16,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 
-import com.lianke.audioswitch.AudioSwitch;
-import com.lianke.pcm.player.PCMPlayer;
-import com.lianke.pcm.player.PlayerListener;
-import com.lianke.pcm.recorder.PCMRecorder;
-import com.lianke.pcm.recorder.RecordListener;
-import com.lianke.pcm.util.Util;
-
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -40,10 +34,7 @@ import io.flutter.plugin.common.PluginRegistry;
  * PcmPlugin
  */
 public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
-    private MethodChannel recorderChannel;
-    private MethodChannel playerChannel;
-
-    private MethodChannel utilChannel;
+    private MethodChannel pcmMethodChannel;
     private EventChannel pcmStreamChannel;
     private EventChannel.EventSink pcmStreamSink;
     private Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -53,30 +44,17 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     private ActivityPluginBinding activityBinding;
     private Map<Integer, PermissionCallback> permissionCallbackMap = new HashMap<>();
 
-    private AudioSwitch audioSwitch;
-
+    private Map<String, PCMPlayer> players = new HashMap<>();
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         applicationContext = flutterPluginBinding.getApplicationContext();
-        recorderChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "pcm/recorder");
-        recorderChannel.setMethodCallHandler(this);
-        pcmStreamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "pcm/stream");
+        pcmMethodChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm");
+        pcmMethodChannel.setMethodCallHandler(this);
+        pcmStreamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm.stream");
         pcmStreamChannel.setStreamHandler(this);
 
-        playerChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "pcm/player");
-        playerChannel.setMethodCallHandler(this);
-
-
-        utilChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "pcm/util");
-        utilChannel.setMethodCallHandler(this);
-
-
         setPCMListener();
-
-
-        audioSwitch = new AudioSwitch();
-        audioSwitch.init(applicationContext, new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "pcm/audioManager"));
 
     }
 
@@ -93,7 +71,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             int sampleRateInHz = call.argument("sampleRateInHz");
             int preFrameSize = call.argument("preFrameSize");
             boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
-            boolean success = PCMRecorder.shared().init(sampleRateInHz, preFrameSize, enableAEC);
+            boolean autoGain = Boolean.TRUE.equals(call.argument("autoGain"));
+            boolean noiseSuppress = Boolean.TRUE.equals(call.argument("noiseSuppress"));
+            boolean success = PCMRecorder.shared().setUp(sampleRateInHz, preFrameSize, enableAEC, autoGain, noiseSuppress);
             if (success) {
                 success = PCMRecorder.shared().start();
             }
@@ -107,77 +87,95 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             requestRecordPermission(result);
         } else if ("checkRecordPermission".equals(method)) {
             result.success(checkRecordPermission(applicationContext));
-        }
-        ///player
-        else if ("setUpPlayer".equals(method)) {
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
-            PCMPlayer.shared().setUp(sampleRateInHz, voiceCall);
-            result.success(true);
-        } else if ("startPlaying".equals(method)) {
-            byte[] data = call.argument("data");
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            boolean voiceCall = Boolean.TRUE.equals(call.argument("voiceCall"));
-            PCMPlayer.shared().setUp(sampleRateInHz, voiceCall);
-            PCMPlayer.shared().feed(data);
-            result.success(true);
-        } else if ("pausePlaying".equals(method)) {
-            PCMPlayer.shared().pause();
-            result.success(true);
-        } else if ("isPlaying".equals(method)) {
-            result.success(PCMPlayer.shared().isPlaying());
-        } else if ("stopPlaying".equals(method)) {
-            PCMPlayer.shared().stop();
-            result.success(true);
-        } else if ("clearPlayer".equals(method)) {
-            PCMPlayer.shared().clear();
-            result.success(true);
-        } else if ("remainingFrames".equals(method)) {
-            result.success(PCMPlayer.shared().remainingFrames());
-        }
-        if ("pcm2wav".equals(method)) {
-            String pcmPath = call.argument("pcmPath");
-            String wavPath = call.argument("wavPath");
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            new Thread(
-                    () -> {
-                        Util.pcm2wav(pcmPath, wavPath, sampleRateInHz, 1, 16);
-                        uiHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                result.success(true);
-                            }
-                        });
-                    }
-            ).start();
-
-        } else if ("adpcm2wav".equals(method)) {
-            String adpcmPath = call.argument("adpcmPath");
-            String wavPath = call.argument("wavPath");
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            new Thread(
-                    () -> {
-                        Util.adpcmFile2wav(adpcmPath, wavPath, sampleRateInHz, 1, 16);
-                        uiHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                result.success(true);
-                            }
-                        });
-                    }
-            ).start();
         } else if ("enableLog".equals(method)) {
             Util.enableLog = call.argument("enableLog");
             result.success(true);
         }
+
+
+        ///player
+        else if ("setUpPlayer".equals(method)) {
+            int sampleRateInHz = call.argument("sampleRateInHz");
+            String playerId = call.argument("playerId");
+            if (players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer已经初始化");
+            } else {
+                PCMPlayer player = new PCMPlayer();
+                player.setUp(sampleRateInHz);
+                players.put(playerId, player);
+            }
+            result.success(true);
+        } else if ("startPlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+                result.success(false);
+            } else {
+                players.get(playerId).start();
+                result.success(players.get(playerId).isPlaying());
+            }
+        } else if ("pausePlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+                result.success(false);
+            } else {
+                players.get(playerId).pause();
+                result.success(true);
+            }
+        } else if ("isPlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+                result.success(false);
+            } else {
+                result.success(players.get(playerId).isPlaying());
+            }
+        } else if ("stopPlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+                result.success(false);
+            } else {
+                players.get(playerId).stop();
+                result.success(true);
+                players.remove(playerId);
+            }
+        } else if ("clearPlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+            } else {
+                players.get(playerId).clear();
+            }
+            result.success(true);
+        } else if ("remainingFrames".equals(method)) {
+            String playerId = call.argument("playerId");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+                result.success(0);
+            } else {
+                result.success(players.get(playerId).remainingFrames());
+            }
+        } else if ("feedPlaying".equals(method)) {
+            String playerId = call.argument("playerId");
+            byte[] data = call.argument("data");
+            if (!players.containsKey(playerId)) {
+                Util.print(playerId + " PCMPlayer未初始化");
+            } else {
+                players.get(playerId).feed(data);
+            }
+            result.success(true);
+        }
+
+
     }
 
 
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-        recorderChannel.setMethodCallHandler(null);
-        utilChannel.setMethodCallHandler(null);
-        playerChannel.setMethodCallHandler(null);
+        PCMRecorder.shared().stop();
+        pcmMethodChannel.setMethodCallHandler(null);
         pcmStreamChannel.setStreamHandler(null);
         pcmStreamSink = null;
     }
@@ -196,14 +194,12 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     //设置录音和播放监听
     public void setPCMListener() {
         PCMRecorder.shared().setRecordListener(new PCMRecordListener());
-        PCMPlayer.shared().setPlayerListener(new PCMPlayerListener());
     }
 
     @Override
     public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
         activityBinding = binding;
         mActivity = binding.getActivity();
-        audioSwitch.setActivity(mActivity);
         binding.addRequestPermissionsResultListener(this);
     }
 
@@ -223,7 +219,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             activityBinding.removeRequestPermissionsResultListener(this);
             activityBinding = null;
             mActivity = null;
-            audioSwitch.setActivity(null);
         }
     }
 
@@ -257,19 +252,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         }
     }
 
-    class PCMPlayerListener implements PlayerListener {
-
-        @Override
-        public void onFeedCallback(long remainingFrames) {
-            if (playerChannel != null) {
-                uiHandler.post(() -> {
-                    if (playerChannel != null) {
-                        playerChannel.invokeMethod("onFeedCallback", remainingFrames);
-                    }
-                });
-            }
-        }
-    }
 
     abstract static class PermissionCallback {
         abstract void onPermission(boolean hasPermission);

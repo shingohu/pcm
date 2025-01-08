@@ -4,7 +4,6 @@ import 'package:pcm/pcm.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AudioManager.initialize();
   runApp(const MyApp());
 }
 
@@ -16,6 +15,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  PCMPlayer pcmPlayer = PCMPlayer(sampleRateInHz: 8000);
+
   @override
   void initState() {
     super.initState();
@@ -35,12 +36,17 @@ class _MyAppState extends State<MyApp> {
                   children: [
                     TextButton(
                         onPressed: () async {
-                          await PCMRecorder.requestRecordPermission();
+                          PCMRecorder.useRecordOnMobilePlatform(false);
+                          pcmPlayer.setUp(sampleRateInHz: 8000);
+                          bool success =
+                              await PCMRecorder.requestRecordPermission();
                           int start = DateTime.now().millisecondsSinceEpoch;
                           int i = 0;
                           PCMRecorder.start(
-                              enableAEC: false,
                               preFrameSize: 160,
+                              echoCancel: true,
+                              autoGain: true,
+                              noiseSuppress: true,
                               onData: (data) {
                                 if (i == 0) {
                                   i = 1;
@@ -48,7 +54,8 @@ class _MyAppState extends State<MyApp> {
                                       "第一帧耗时:${DateTime.now().millisecondsSinceEpoch - start}");
                                 }
                                 if (data != null) {
-                                  PCMPlayer.play(data);
+                                  pcmPlayer.play();
+                                  pcmPlayer.feed(data);
                                 }
                               });
                         },
@@ -56,7 +63,7 @@ class _MyAppState extends State<MyApp> {
                     TextButton(
                         onPressed: () async {
                           await PCMRecorder.stop();
-                          await PCMPlayer.stop();
+                          pcmPlayer.release();
                         },
                         child: Text("结束录音")),
                   ],

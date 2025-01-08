@@ -10,65 +10,46 @@ import Foundation
 
 class PCMPlayerClient {
     
-    static let shared = PCMPlayerClient()
-    
-    private init(){
-       
-    }
-    
-    
-    public func setOnPlayComplete(onPlayComplete:@escaping (()->Void)){
-        PCMPlayer.shared().onPlayComplete = onPlayComplete
-    }
-    
+    let player = PCMPlayer()
     
 
     
-    
     public func setUp(samplateRate:Int){
-        PCMPlayer.shared().setUp(Double(samplateRate));
+        player.setUp(Double(samplateRate));
     }
     
-  
+    
     func start() {
-        PCMPlayer.shared().start()
+        player.start()
     }
     
     func pause(){
-        PCMPlayer.shared().pause()
+        player.pause()
     }
     
     
     func stop(){
-        PCMPlayer.shared().stop()
+        player.stop()
     }
     
-  
-    
     func clear(){
-        PCMPlayer.shared().clear()
+        player.clear()
     }
     
     func feed(audio:Data){
-        if(!self.isPlaying){
-            start()
-        }
         if(audio.count > 0){
-            PCMPlayer.shared().feed(audio)
+            player.feed(audio)
         }
     }
-    
-    
     ///是否正在播放
     var isPlaying: Bool {
         get {
-            PCMPlayer.shared().isRunning
+            player.isRunning
         }
     }
     
     public func remainingFrames()->Int{
-       
-        return PCMPlayer.shared().remainingFrames();
+        return player.remainingFrames();
     }
     
 

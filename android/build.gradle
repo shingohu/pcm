@@ -12,7 +12,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10"
     }
 
-    ext.kotlin_version = '1.7.10'
+    ext.kotlin_version = '1.9.10'
 
 
 
@@ -32,7 +32,7 @@ android {
         namespace 'com.lianke'
     }
 
-    compileSdkVersion 34
+    compileSdk 34
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -40,20 +40,10 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 23
+        minSdkVersion 21
     }
 
     dependencies {
 
-    }
-
-    testOptions {
-        unitTests.all {
-            testLogging {
-               events "passed", "skipped", "failed", "standardOut", "standardError"
-               outputs.upToDateWhen {false}
-               showStandardStreams = true
-            }
-        }
     }
 }
