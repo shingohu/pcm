@@ -1,9 +1,9 @@
-import Flutter
-import UIKit
+import FlutterMacOS
 import AVFoundation
+import Cocoa
 
 
-public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicationDelegate {
+public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     
     
     private var pcmStreamSink: FlutterEventSink?
@@ -14,19 +14,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = PCMPlugin()
-        let pcmMethodChannel = FlutterMethodChannel(name: "com.lianke.pcm", binaryMessenger: registrar.messenger())
-        let pcmStreamChannel = FlutterEventChannel(name: "com.lianke.pcm.stream", binaryMessenger: registrar.messenger())
+        let pcmMethodChannel = FlutterMethodChannel(name: "com.lianke.pcm", binaryMessenger: registrar.messenger)
+        let pcmStreamChannel = FlutterEventChannel(name: "com.lianke.pcm.stream", binaryMessenger: registrar.messenger)
         pcmStreamChannel.setStreamHandler(instance)
         registrar.addMethodCallDelegate(instance, channel: pcmMethodChannel)
         registrar.addApplicationDelegate(instance)
-        let session = AVAudioSession.sharedInstance()
-        if(session.category != .playAndRecord && session.category != .record){
-            do {
-                try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
-            }catch {
-                print(error)
-            }
-        }
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     
@@ -40,30 +32,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    var enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
-                    let session = AVAudioSession.sharedInstance()
-                    if(session.category != .playAndRecord && session.category != .record){
-                        do {
-                            self.printLog(message: "录音时没有设置录音模式,重新设置")
-                            try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
-                        }catch {
-                            print(error)
-                            self.printLog(message: "设置音频录音和播放模式失败")
-                            result(false)
-                            return
-                        }
-                    }
-                    if(enableAEC && session.category == .record){
-                        enableAEC = false
-                    }
-                    
-                    if(!PCMRecorder.shared().isRunning){
-                        do {
-                            try session.setActive(true)
-                        }catch {
-                            print("获取焦点失败")
-                        }
-                    }
+                    let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
                     var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
                     if(success){
                         success =  PCMRecorderClient.shared.start()
@@ -110,12 +79,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(false)
             }else{
-                let session = AVAudioSession.sharedInstance()
-                if(session.category == .record){
-                    print("当前为仅录音模式,不可进行播放")
-                    result(false)
-                    return
-                }
                 players[playerId]?.start()
                 result(players[playerId]!.isPlaying)
             }
@@ -216,30 +179,40 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     
     func requestRecordPermission(result: @escaping FlutterResult){
-        if #available(iOS 17.0, *) {
-            AVAudioApplication.requestRecordPermission { allow in
-                result(allow)
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            result(true)
+          break
+        case .notDetermined:
+          AVCaptureDevice.requestAccess(for: .audio) { allowed in
+            DispatchQueue.main.async {
+                result(allowed)
             }
-        } else {
-            let session = AVAudioSession.sharedInstance();
-            session.requestRecordPermission { allow in
-                result(allow)
-            }
+          }
+          break
+        default:
+            result(false)
+          break
         }
         
     }
     
     
     func haseRecordPermission(_ response: @escaping (Bool) -> Void){
-        if #available(iOS 17.0, *) {
-            AVAudioApplication.requestRecordPermission { allow in
-                response(allow)
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            response(true)
+          break
+        case .notDetermined:
+          AVCaptureDevice.requestAccess(for: .audio) { allowed in
+            DispatchQueue.main.async {
+                response(allowed)
             }
-        } else {
-            let session = AVAudioSession.sharedInstance();
-            session.requestRecordPermission { allow in
-                response(allow)
-            }
+          }
+          break
+        default:
+            response(false)
+          break
         }
         
     }

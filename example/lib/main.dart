@@ -44,7 +44,7 @@ class _MyAppState extends State<MyApp> {
                           int i = 0;
                           PCMRecorder.start(
                               preFrameSize: 160,
-                              echoCancel: true,
+                              echoCancel: false,
                               autoGain: true,
                               noiseSuppress: true,
                               onData: (data) {

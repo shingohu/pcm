@@ -25,7 +25,7 @@ class PCMPlayer {
   Future<void> setUp({
     int sampleRateInHz = 8000,
   }) async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     _dispose = false;
@@ -37,7 +37,7 @@ class PCMPlayer {
 
   ///开始播放
   Future<void> play() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     if (_dispose) {
@@ -53,7 +53,7 @@ class PCMPlayer {
    * 以Stream方式持续播放PCM数据
    */
   Future<void> feed(Uint8List data) async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     if (_dispose) {
@@ -67,7 +67,7 @@ class PCMPlayer {
 
   ///停止播放(不销毁播放器)
   Future<void> stop() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     if (_dispose) {
@@ -82,7 +82,7 @@ class PCMPlayer {
 
   ///结束播放(销毁播放器)
   Future<void> release() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     if (_dispose) {
@@ -96,7 +96,7 @@ class PCMPlayer {
 
   ///清空播放数据
   Future<void> clear() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
     await _channel.invokeMethod("clearPlaying", {
@@ -106,7 +106,7 @@ class PCMPlayer {
 
   ///是否正在播放
   Future<bool> get isPlaying async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return false;
     }
     return await _channel.invokeMethod("isPlaying", {
@@ -116,7 +116,7 @@ class PCMPlayer {
 
   ///剩余播放帧长度
   Future<int> remainingFrames() async {
-    if (!Platform.isIOS && !Platform.isAndroid) {
+    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return 0;
     }
     return await _channel.invokeMethod("remainingFrames", {
