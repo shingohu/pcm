@@ -30,6 +30,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     
+    
+    public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+        PCMRecorderClient.shared.stop()
+        clearAllPlayer()
+    }
 
     
     
@@ -186,9 +191,19 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             }
             result(true)
         }
-        
+        else if(method == "hotRestart"){
+            PCMRecorderClient.shared.stop()
+            clearAllPlayer()
+            result(true)
+        }
     }
     
+    private func clearAllPlayer(){
+        players.forEach { key,value in
+            value.stop()
+        }
+        players.removeAll()
+    }
     
     
     

@@ -13,6 +13,8 @@ class PCMPlayer {
   final String playerId;
   bool _dispose = false;
 
+  bool _hasSetUp = false;
+
   PCMPlayer({String? playerId, int? sampleRateInHz})
       : playerId = playerId ?? _uuid.v4() {
     if (sampleRateInHz != null) {
@@ -28,7 +30,11 @@ class PCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
+    if (_hasSetUp) {
+      return;
+    }
     _dispose = false;
+    _hasSetUp = false;
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,
@@ -41,6 +47,9 @@ class PCMPlayer {
       return;
     }
     if (_dispose) {
+      return;
+    }
+    if (_isPlayingNow) {
       return;
     }
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
@@ -77,7 +86,6 @@ class PCMPlayer {
       "playerId": playerId,
     });
     _isPlayingNow = false;
-    _dispose = true;
   }
 
   ///结束播放(销毁播放器)
@@ -91,6 +99,8 @@ class PCMPlayer {
     await _channel.invokeMethod("stopPlaying", {
       "playerId": playerId,
     });
+    _hasSetUp = false;
+    _dispose = true;
     _isPlayingNow = false;
   }
 

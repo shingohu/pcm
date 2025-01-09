@@ -166,15 +166,27 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 players.get(playerId).feed(data);
             }
             result.success(true);
+        } else if ("hotRestart".equals(method)) {
+            PCMRecorder.shared().stop();
+            clearAllPlayer();
+            result.success(true);
         }
 
 
     }
 
 
+    void clearAllPlayer() {
+        for (PCMPlayer player : players.values()) {
+            player.stop();
+        }
+        players.clear();
+    }
+
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         PCMRecorder.shared().stop();
+        clearAllPlayer();
         pcmMethodChannel.setMethodCallHandler(null);
         pcmStreamChannel.setStreamHandler(null);
         pcmStreamSink = null;

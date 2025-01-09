@@ -23,6 +23,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     }
     
 
+    public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+        PCMRecorderClient.shared.stop()
+        clearAllPlayer()
+    }
     
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -150,7 +154,22 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
             result(true)
         }
         
+        else if(method == "hotRestart"){
+            PCMRecorderClient.shared.stop()
+            clearAllPlayer()
+            result(true)
+        }
+        
     }
+    
+    private func clearAllPlayer(){
+        players.forEach { key,value in
+            value.stop()
+        }
+        players.removeAll()
+    }
+    
+    
     
     
     

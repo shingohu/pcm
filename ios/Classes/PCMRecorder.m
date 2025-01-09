@@ -191,10 +191,6 @@
                                         &outputEnableFlag,
                                         sizeof(outputEnableFlag)),
                    "Open output of bus 0 failed");
-
-    
-   
-  
     //音频采集结果回调
     AURenderCallbackStruct recordCallback;
     recordCallback.inputProc = _recordCallback;
