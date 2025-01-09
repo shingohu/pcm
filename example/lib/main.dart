@@ -21,6 +21,14 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    loadBeep();
+  }
+
+  void loadBeep() {
+    BeepPlayer.load("assets/hear_start.aac");
+    BeepPlayer.load("assets/hear_end.aac");
+    BeepPlayer.load("assets/blecn.aac");
+    BeepPlayer.load("assets/blediscn.aac");
   }
 
   @override
@@ -43,10 +51,11 @@ class _MyAppState extends State<MyApp> {
                               await PCMRecorder.requestRecordPermission();
                           int start = DateTime.now().millisecondsSinceEpoch;
                           int i = 0;
+                          BeepPlayer.play("assets/hear_start.aac");
                           PCMRecorder.start(
                               preFrameSize: 320,
                               echoCancel: true,
-                              autoGain: false,
+                              autoGain: true,
                               noiseSuppress: false,
                               onData: (data) {
                                 if (i == 0) {
@@ -67,6 +76,14 @@ class _MyAppState extends State<MyApp> {
                           pcmPlayer.release();
                         },
                         child: Text("结束录音")),
+                    TextButton(
+                        onPressed: () async {
+                          BeepPlayer.play("assets/hear_start.aac");
+                          //BeepPlayer.play("assets/hear_start.wav");
+                          // BeepPlayer.play("assets/hear_end.wav");
+                          // BeepPlayer.play("assets/blecn.mp3");
+                        },
+                        child: Text("播放Beep")),
                   ],
                 ),
               ),

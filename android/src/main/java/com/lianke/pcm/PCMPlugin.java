@@ -54,6 +54,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         pcmStreamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm.stream");
         pcmStreamChannel.setStreamHandler(this);
 
+        BeepPlayer.shared().init(flutterPluginBinding.getApplicationContext().getAssets(), flutterPluginBinding.getFlutterAssets());
         setPCMListener();
 
     }
@@ -170,9 +171,28 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             PCMRecorder.shared().stop();
             clearAllPlayer();
             result.success(true);
+        } else if ("loadSound".equals(method)) {
+            String path = call.argument("soundPath");
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    boolean success = BeepPlayer.shared().load(path);
+                    uiHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            result.success(success);
+                        }
+                    });
+                }
+            }).start();
+        } else if ("playSound".equals(method)) {
+            String path = call.argument("soundPath");
+            result.success(BeepPlayer.shared().play(path));
+        } else if ("stopSound".equals(method)) {
+            String path = call.argument("soundPath");
+            BeepPlayer.shared().stop(path);
+            result.success(true);
         }
-
-
     }
 
 

@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import AVFoundation
+import CoreTelephony
 
 
 public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicationDelegate {
@@ -196,7 +197,29 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             clearAllPlayer()
             result(true)
         }
+        
+        else if(method == "isTelephoneCalling"){
+            result(self.isTelephoneCalling())
+        }
     }
+    
+    
+    
+    func isTelephoneCalling()->Bool{
+        
+        let callcenter = CTCallCenter()
+        
+        if(callcenter.currentCalls != nil){
+            for call in callcenter.currentCalls! {
+                if(call.callState != CTCallStateDisconnected){
+                    return true
+                }
+            }
+        }
+        return false
+        
+    }
+    
     
     private func clearAllPlayer(){
         players.forEach { key,value in

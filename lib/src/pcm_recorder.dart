@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:pcm/pcm.dart';
 import 'package:record/record.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
@@ -58,7 +59,7 @@ class _InnerPCMRecorder {
               noiseSuppress: noiseSuppress)))
           .listen((data) {
         if (_startCompleter != null && !_startCompleter.isCompleted) {
-          print("开始录音");
+          PCMLib.log("开始录音");
           _startCompleter.complete(true);
         }
         audios.addAll(data.toList());
@@ -76,7 +77,7 @@ class _InnerPCMRecorder {
           _audioListener(Uint8List.fromList(audios));
         }
         _audioListener(null);
-        print("结束录音");
+        PCMLib.log("结束录音");
       }, onError: (e) {
         print(e);
         if (_startCompleter != null) {
