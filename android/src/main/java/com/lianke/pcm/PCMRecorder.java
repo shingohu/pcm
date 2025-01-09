@@ -269,6 +269,6 @@ public class PCMRecorder {
     }
 
     private static void print(String msg) {
-        Util.print(msg);
+        PCMLib.print(msg);
     }
 }

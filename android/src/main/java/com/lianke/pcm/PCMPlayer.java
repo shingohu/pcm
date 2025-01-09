@@ -1,7 +1,6 @@
 package com.lianke.pcm;
 
 import android.media.AudioAttributes;
-import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -196,7 +195,7 @@ public class PCMPlayer {
 
 
     private static void print(String msg) {
-        Util.print(msg);
+        PCMLib.print(msg);
     }
 
     private void mSamplesClear() {

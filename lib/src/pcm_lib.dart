@@ -32,4 +32,12 @@ class PCMLib {
       print(message);
     }
   }
+
+  ///是否正在打电话
+  Future<bool> get isTelephoneCalling async {
+    if (!Platform.isIOS && !Platform.isAndroid) {
+      return false;
+    }
+    return await _channel.invokeMethod("isTelephoneCalling");
+  }
 }

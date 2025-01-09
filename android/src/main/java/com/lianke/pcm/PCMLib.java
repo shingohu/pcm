@@ -3,7 +3,7 @@ package com.lianke.pcm;
 import android.util.Log;
 
 
-public class Util {
+public class PCMLib {
 
     public static boolean enableLog = true;
 
