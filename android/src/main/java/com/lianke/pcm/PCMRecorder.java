@@ -200,15 +200,17 @@ public class PCMRecorder {
     }
 
     public synchronized void stop() {
+
+
         if (mAudioRecord != null) {
             mAudioRecord.release();
-            mAudioRecord = null;
         }
         stopRecordingRunner();
         if (isRecording) {
             isRecording = false;
             print("结束录音");
         }
+        mAudioRecord = null;
     }
 
 

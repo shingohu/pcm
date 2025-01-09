@@ -132,9 +132,11 @@ public class PCMPlayer {
 
     /// 结束播放
     public void stop() {
+        if (mPlayer != null && isPlaying) {
+            mPlayer.stop();
+        }
         stopPlaybackThread();
         if (mPlayer != null) {
-            mPlayer.flush();
             mPlayer.release();
             mPlayer = null;
         }

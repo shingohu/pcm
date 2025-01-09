@@ -34,7 +34,7 @@ class PCMPlayer {
       return;
     }
     _dispose = false;
-    _hasSetUp = false;
+    _hasSetUp = true;
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,

@@ -4,6 +4,7 @@ import 'package:pcm/pcm.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await PCMLib.hotRestart();
   runApp(const MyApp());
 }
 
@@ -43,10 +44,10 @@ class _MyAppState extends State<MyApp> {
                           int start = DateTime.now().millisecondsSinceEpoch;
                           int i = 0;
                           PCMRecorder.start(
-                              preFrameSize: 160,
-                              echoCancel: false,
-                              autoGain: true,
-                              noiseSuppress: true,
+                              preFrameSize: 320,
+                              echoCancel: true,
+                              autoGain: false,
+                              noiseSuppress: false,
                               onData: (data) {
                                 if (i == 0) {
                                   i = 1;
