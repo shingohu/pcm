@@ -21,13 +21,15 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         registrar.addMethodCallDelegate(instance, channel: pcmMethodChannel)
         registrar.addApplicationDelegate(instance)
         let session = AVAudioSession.sharedInstance()
+        
         if(session.category != .playAndRecord && session.category != .record){
             do {
-                try session.setCategory(.playAndRecord,mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
+                try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers,])
             }catch {
                 print(error)
             }
         }
+
         BeepPlayer.shared.setUp(register: registrar)
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
@@ -52,7 +54,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     if(session.category != .playAndRecord && session.category != .record){
                         do {
                             self.printLog(message: "录音时没有设置录音模式,重新设置")
-                            try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
+                            try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
                         }catch {
                             print(error)
                             self.printLog(message: "设置音频录音和播放模式失败")

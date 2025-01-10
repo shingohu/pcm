@@ -52,6 +52,7 @@ class PCMPlayer {
     if (_isPlayingNow) {
       return;
     }
+    _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
           "playerId": playerId,
         }) ??

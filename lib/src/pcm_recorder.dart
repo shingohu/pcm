@@ -24,6 +24,7 @@ class _InnerPCMRecorder {
   bool _useRecordOnPhonePlatform = false;
 
   ///设置移动平台是否使用第三方record库进行录音
+  ///开发时为了对比第三方录音效果使用
   void useRecordOnMobilePlatform(bool use) {
     _useRecordOnPhonePlatform = use;
   }
@@ -45,6 +46,11 @@ class _InnerPCMRecorder {
       bool autoGain = false,
       bool noiseSuppress = false,
       Function(Uint8List?)? onData}) async {
+    if (isRecordingNow) {
+      PCMLib.log("正在录音,请先停止");
+      return true;
+    }
+
     this._onAudioCallback = onData;
 
     if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
