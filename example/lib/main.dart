@@ -78,12 +78,20 @@ class _MyAppState extends State<MyApp> {
                         child: Text("结束录音")),
                     TextButton(
                         onPressed: () async {
+                          BeepPlayer.play("assets/blecn.aac");
                           BeepPlayer.play("assets/hear_start.aac");
-                          //BeepPlayer.play("assets/hear_start.wav");
-                          // BeepPlayer.play("assets/hear_end.wav");
-                          // BeepPlayer.play("assets/blecn.mp3");
+                          // BeepPlayer.play("assets/hear_end.aac");
+                          // BeepPlayer.play("assets/blecn.aac");
                         },
-                        child: Text("播放Beep")),
+                        child: Text("开始播放Beep")),
+                    TextButton(
+                        onPressed: () async {
+                          BeepPlayer.stop("assets/blecn.aac");
+                          //BeepPlayer.play("assets/hear_start.aac");
+                          // BeepPlayer.play("assets/hear_end.aac");
+                          // BeepPlayer.play("assets/blecn.aac");
+                        },
+                        child: Text("停止播放Beep")),
                   ],
                 ),
               ),

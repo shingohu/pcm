@@ -6,6 +6,7 @@ import android.content.res.AssetManager;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.util.Log;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -23,7 +24,9 @@ public class BeepPlayer {
             @Override
             public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                 if (status != 0) {
-                    System.out.println("sound load error" + sampleId);
+                    Log.e("PCM", "sound load error" + sampleId);
+                } else {
+                    soundPool.play(sampleId, 0, 0, sampleId, 0, 2);
                 }
             }
         });
@@ -64,11 +67,10 @@ public class BeepPlayer {
     }
 
     public boolean play(String filePath) {
-        if (!soundMap.containsKey(filePath)) {
-            load(filePath);
-        }
         if (soundMap.containsKey(filePath)) {
             return soundPool.play(soundMap.get(filePath), 1, 1, 1000, 0, 1) != 0;
+        } else {
+            Log.e("PCM", "the " + filePath + " is not loaded");
         }
         return false;
     }

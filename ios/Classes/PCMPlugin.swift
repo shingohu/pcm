@@ -23,11 +23,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         let session = AVAudioSession.sharedInstance()
         if(session.category != .playAndRecord && session.category != .record){
             do {
-                try session.setCategory(.playAndRecord,mode: .default, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
+                try session.setCategory(.playAndRecord,mode: .voiceChat, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
             }catch {
                 print(error)
             }
         }
+        BeepPlayer.shared.setUp(register: registrar)
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     
@@ -201,6 +202,28 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "isTelephoneCalling"){
             result(self.isTelephoneCalling())
         }
+        
+        else if ("loadSound" == method) {
+            
+            DispatchQueue.global(qos: .background).async {
+                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+                let success = BeepPlayer.shared.load(filePath: soundPath)
+                           // 回到主线程更新UI
+                           DispatchQueue.main.async{
+                               result(success)
+                           }
+            }
+            
+        } else if ("playSound" == method) {
+            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+            result(BeepPlayer.shared.play(filePath: soundPath))
+        } else if ("stopSound" == (method)) {
+            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+            BeepPlayer.shared.stop(filePath: soundPath)
+            result(true)
+        }
+        
+        
     }
     
     

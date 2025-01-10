@@ -19,6 +19,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
         pcmStreamChannel.setStreamHandler(instance)
         registrar.addMethodCallDelegate(instance, channel: pcmMethodChannel)
         registrar.addApplicationDelegate(instance)
+        BeepPlayer.shared.setUp(register: registrar)
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     
@@ -160,6 +161,25 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
             result(true)
         }
         
+        else if ("loadSound" == method) {
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+                let success = BeepPlayer.shared.load(filePath: soundPath)
+                           // 回到主线程更新UI
+                           DispatchQueue.main.async{
+                               result(success)
+                           }
+            }
+            
+        } else if ("playSound" == method) {
+            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+            result(BeepPlayer.shared.play(filePath: soundPath))
+        } else if ("stopSound" == (method)) {
+            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+            BeepPlayer.shared.stop(filePath: soundPath)
+            result(true)
+        }
     }
     
     private func clearAllPlayer(){
