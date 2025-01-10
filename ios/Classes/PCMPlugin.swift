@@ -218,7 +218,14 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             
         } else if ("playSound" == method) {
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            result(BeepPlayer.shared.play(filePath: soundPath))
+            DispatchQueue.global(qos: .background).async {
+                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
+                let success = BeepPlayer.shared.play(filePath: soundPath)
+                           // 回到主线程更新UI
+                           DispatchQueue.main.async{
+                               result(success)
+                           }
+            }
         } else if ("stopSound" == (method)) {
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
             BeepPlayer.shared.stop(filePath: soundPath)

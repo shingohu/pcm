@@ -34,7 +34,7 @@ class _InnerPCMRecorder {
    * [sampleRateInHz] 录音采样率
    * [preFrameSize]每次获取回调数据大小
    * [echoCancel]是否开启回音消除(设备支持的情况下),开启后录音可能会被影响
-   * Android上开启回声消除使用VOICE_COMMUNICATION录音,iOS开启后会导致启动MIC变慢
+   * Android上开启回声消除使用VOICE_COMMUNICATION录音,iOS开启后会导致启动MIC变慢,并且音量变小
    * [autoGain]是否开启自动增益(设备支持的情况下),only android,开启后录音音量可能会被影响
    * [noiseSuppress]是否开启降噪(设备支持的情况下)，only android,开启后录音音量可能会被影响
    * [onData] 音频数据回调

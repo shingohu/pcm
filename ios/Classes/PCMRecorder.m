@@ -96,8 +96,10 @@
             AudioOutputUnitStop(_remoteIOUnit);
         }
         AudioUnitUninitialize(_remoteIOUnit);
-        AudioComponentInstanceDispose(_remoteIOUnit);
-        _remoteIOUnit = nil;
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+            AudioComponentInstanceDispose(self->_remoteIOUnit);
+            self->_remoteIOUnit = nil;
+        });
     }
     if(self.isRunning){
         self.isRunning = NO;

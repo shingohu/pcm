@@ -46,7 +46,7 @@ class PCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
-    if (_dispose) {
+    if (_dispose || !_hasSetUp) {
       return;
     }
     if (_isPlayingNow) {
@@ -66,7 +66,7 @@ class PCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
-    if (_dispose) {
+    if (_dispose || !_hasSetUp) {
       return;
     }
     return _channel.invokeMethod("feedPlaying", {
@@ -80,13 +80,13 @@ class PCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
-    if (_dispose) {
+    if (_dispose || !_hasSetUp) {
       return;
     }
+    _isPlayingNow = false;
     await _channel.invokeMethod("pausePlaying", {
       "playerId": playerId,
     });
-    _isPlayingNow = false;
   }
 
   ///结束播放(销毁播放器)
@@ -94,20 +94,23 @@ class PCMPlayer {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       return;
     }
-    if (_dispose) {
+    if (_dispose || !_hasSetUp) {
       return;
     }
-    await _channel.invokeMethod("stopPlaying", {
-      "playerId": playerId,
-    });
     _hasSetUp = false;
     _dispose = true;
     _isPlayingNow = false;
+    await _channel.invokeMethod("stopPlaying", {
+      "playerId": playerId,
+    });
   }
 
   ///清空播放数据
   Future<void> clear() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      return;
+    }
+    if (_dispose || !_hasSetUp) {
       return;
     }
     await _channel.invokeMethod("clearPlaying", {
