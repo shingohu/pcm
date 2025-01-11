@@ -207,7 +207,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         
         else if ("loadSound" == method) {
             
-            DispatchQueue.global(qos: .background).async {
+            DispatchQueue.global(qos: .userInitiated).async {
                 let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
                 let success = BeepPlayer.shared.load(filePath: soundPath)
                            // 回到主线程更新UI
@@ -217,15 +217,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             }
             
         } else if ("playSound" == method) {
+            
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            DispatchQueue.global(qos: .background).async {
-                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-                let success = BeepPlayer.shared.play(filePath: soundPath)
-                           // 回到主线程更新UI
-                           DispatchQueue.main.async{
-                               result(success)
-                           }
-            }
+            let success = BeepPlayer.shared.play(filePath: soundPath)
+            result(success)
         } else if ("stopSound" == (method)) {
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
             BeepPlayer.shared.stop(filePath: soundPath)

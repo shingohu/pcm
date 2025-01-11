@@ -41,7 +41,6 @@ class PCMRecorderClient {
     
     public func initRecorder(onAudioCallback:OnAudioCallback?){
         self.onAudioCallback = onAudioCallback
-        self.setUp(samplateRate: samplateRate, preFrameSize: PRE_FRAME_SIZE, enableAEC: enableAEC)
     }
     
     
