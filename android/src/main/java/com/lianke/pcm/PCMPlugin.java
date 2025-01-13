@@ -3,11 +3,9 @@ package com.lianke.pcm;
 
 import android.Manifest;
 import android.app.Activity;
-
 import android.content.Context;
 
 import android.content.pm.PackageManager;
-
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -56,7 +54,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
         BeepPlayer.shared().init(flutterPluginBinding.getApplicationContext().getAssets(), flutterPluginBinding.getFlutterAssets());
         setPCMListener();
-
     }
 
     @Override
@@ -173,17 +170,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             result.success(true);
         } else if ("loadSound".equals(method)) {
             String path = call.argument("soundPath");
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    boolean success = BeepPlayer.shared().load(path);
-                    uiHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            result.success(success);
-                        }
-                    });
-                }
+            new Thread(() -> {
+                boolean success = BeepPlayer.shared().load(path);
+                uiHandler.post(() -> result.success(success));
             }).start();
         } else if ("playSound".equals(method)) {
             String path = call.argument("soundPath");
@@ -199,10 +188,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
 
     private boolean isTelephoneCalling() {
-        AudioManager audioManager = audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
         return audioManager.getMode() == AudioManager.MODE_IN_CALL;
     }
-
 
     void clearAllPlayer() {
         for (PCMPlayer player : players.values()) {

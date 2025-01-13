@@ -121,8 +121,8 @@ public class PCMPlayer {
                         mPlayer.write(data, data.remaining(), AudioTrack.WRITE_BLOCKING);
                     }
                 }
-
             }
+            print("结束播放");
         });
         mAudioPlayingRunner.setPriority(Thread.MAX_PRIORITY);
         mAudioPlayingRunner.start();
@@ -135,13 +135,10 @@ public class PCMPlayer {
             mPlayer.stop();
         }
         stopPlaybackThread();
+        isPlaying = false;
         if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
-        }
-        if (isPlaying) {
-            isPlaying = false;
-            print("结束播放");
         }
         mSamplesClear();
     }
@@ -154,10 +151,7 @@ public class PCMPlayer {
             mPlayer.pause();
             mPlayer.flush();
         }
-        if (isPlaying) {
-            isPlaying = false;
-            print("结束播放");
-        }
+        isPlaying = false;
         mSamplesClear();
     }
 

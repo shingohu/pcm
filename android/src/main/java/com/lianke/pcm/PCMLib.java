@@ -10,7 +10,7 @@ public class PCMLib {
     /// 打印日志
     public static void print(String msg) {
         if (enableLog) {
-            Log.d("[PCM]" + "[" + System.currentTimeMillis() + "] ", msg);
+            Log.d("[PCM]", "[" + System.currentTimeMillis() + "] " + msg);
         }
     }
 

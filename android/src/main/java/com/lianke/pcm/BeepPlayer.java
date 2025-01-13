@@ -24,7 +24,7 @@ public class BeepPlayer {
             @Override
             public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                 if (status != 0) {
-                    Log.e("PCM", "sound load error" + sampleId);
+                    Log.e("[BeepPlayer]", "sound load error" + sampleId);
                 } else {
                     soundPool.play(sampleId, 0, 0, sampleId, 0, 2);
                 }
@@ -70,7 +70,7 @@ public class BeepPlayer {
         if (soundMap.containsKey(filePath)) {
             return soundPool.play(soundMap.get(filePath), 1, 1, 1000, 0, 1) != 0;
         } else {
-            Log.e("PCM", "the " + filePath + " is not loaded");
+            Log.e("[BeepPlayer]", "the " + filePath + " is not loaded");
         }
         return false;
     }

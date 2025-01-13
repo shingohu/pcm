@@ -180,6 +180,7 @@ public class PCMRecorder {
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
+                print("结束录音");
             }
         };
         mAudioHandleRunner.setPriority(MAX_PRIORITY);
@@ -200,16 +201,11 @@ public class PCMRecorder {
     }
 
     public synchronized void stop() {
-
-
         if (mAudioRecord != null) {
             mAudioRecord.release();
         }
         stopRecordingRunner();
-        if (isRecording) {
-            isRecording = false;
-            print("结束录音");
-        }
+        isRecording = false;
         mAudioRecord = null;
     }
 
