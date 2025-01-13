@@ -53,11 +53,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     let session = AVAudioSession.sharedInstance()
                     if(session.category != .playAndRecord && session.category != .record){
                         do {
-                            self.printLog(message: "录音时没有设置录音模式,重新设置")
+                            print("开始录音时没有设置录音模式,重新设置")
                             try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
                         }catch {
                             print(error)
-                            self.printLog(message: "设置音频录音和播放模式失败")
+                            print("设置音频录音和播放模式失败")
                             result(false)
                             return
                         }
@@ -77,12 +77,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     if(success){
                         success =  PCMRecorderClient.shared.start()
                     }
-                    if(!success){
-                        self.printLog(message: "录音失败")
-                    }
                     result(success)
                 }else{
-                    self.printLog(message: "没有录音权限")
+                    print("没有录音权限")
                     result(false)
                 }
             }
@@ -95,28 +92,19 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             requestRecordPermission(result: result)
         }else if(method == "checkRecordPermission"){
             requestRecordPermission(result: result)
-        }else if(method == "enableLog"){
-            Log.enable((call.arguments as! Dictionary<String, Any>)["enableLog"]  as! Bool)
-            result(true)
-        }
-        
-        else if(method == "setUpPlayer"){
+        }else if(method == "setUpPlayer"){
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
                 let player = PCMPlayerClient()
                 player.setUp(samplateRate: sampleRateInHz)
                 players[playerId] = player
-                self.printLog(message: "\(playerId) PCMPlayer 初始化,采样率为\(sampleRateInHz)")
-            }else{
-                self.printLog(message: "\(playerId) PCMPlayer已经初始化")
             }
             result(true)
         }
         else if(method == "startPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(false)
             }else{
                 let session = AVAudioSession.sharedInstance()
@@ -133,7 +121,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "stopPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(false)
             }else{
                 players[playerId]?.stop()
@@ -145,7 +132,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "pausePlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(false)
             }else{
                 players[playerId]?.pause()
@@ -156,19 +142,15 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         
         else if(method == "clearPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
-            }else{
+            if(players[playerId] != nil){
                 players[playerId]?.clear()
             }
             result(true)
-            
         }
         
         else if(method == "isPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(false)
             }else{
                 result(players[playerId]!.isPlaying)
@@ -178,7 +160,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "remainingFrames"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
                 result(0)
             }else{
                 result(players[playerId]!.remainingFrames())
@@ -188,9 +169,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         else if(method == "feedPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
-            if(players[playerId] == nil){
-                self.printLog(message: "\(playerId) PCMPlayer未初始化")
-            }else{
+            if(players[playerId] != nil){
                 players[playerId]?.feed(audio: data.data)
             }
             result(true)
@@ -254,13 +233,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         }
         players.removeAll()
     }
-    
-    
-    
-    private func printLog(message:String){
-        Log.print(message)
-    }
-    
     
     
     

@@ -6,7 +6,6 @@
 //
 
 #import "PCMPlayer.h"
-#import "Log.h"
 
 #define kRate 8000 //采样率
 #define kChannels   (1)//声道数
@@ -45,9 +44,7 @@
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
         if(error){
             [self stop];
-            [self printLog:@"播放失败"];
         }else{
-            [self printLog:@"开始播放"];
             self.isRunning = YES;
         }
     }
@@ -58,7 +55,6 @@
         CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
         self.isRunning = NO;
         [self clear];
-        [self printLog:@"结束播放"];
     }
 }
 
@@ -73,17 +69,9 @@
     }
     if(self.isRunning){
         self.isRunning = NO;
-        [self printLog:@"结束播放"];
     }
     [self clear];
 }
-
-
-
--(void)printLog:(NSString*)log{
-    [Log print:log];
-}
-
 
 - (void)feed:(NSData *)data{
     @synchronized (self->mSamples) {

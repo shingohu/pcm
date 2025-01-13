@@ -35,18 +35,16 @@ class BeepPlayer :NSObject, AVAudioPlayerDelegate{
         let assetKey: String = self._registrar!.lookupKey(forAsset: filePath)
         let assetURL: URL? = Bundle.main.url(forResource: assetKey, withExtension: nil)
         if(assetURL == nil){
-            Log.print("\(filePath) can not found");
+            print("\(filePath) can not found");
             return false;
         }
         guard let audioPlayer: AVAudioPlayer = try? AVAudioPlayer(contentsOf: assetURL!) else {
-            Log.print("Failed to initialize AVAudioPlayer for \(filePath)")
+            print("Failed to initialize AVAudioPlayer for \(filePath)")
             return false
         }        
         let isSuccess: Bool = audioPlayer.prepareToPlay()
         if(!isSuccess){
-            Log.print("Failed to prepare AVAudioPlayer to play \(filePath)")
-        }else{
-            Log.print("Successfully prepared AVAudioPlayer to play \(filePath)")
+            print("Failed to prepare AVAudioPlayer to play \(filePath)")
         }
         audioPlayer.delegate = self
         self._audioPlayers[filePath] = audioPlayer
@@ -58,7 +56,7 @@ class BeepPlayer :NSObject, AVAudioPlayerDelegate{
         let player = _audioPlayers[filePath]
         
         if(player == nil){
-            Log.print("\(filePath) has not been loaded")
+            print("\(filePath) has not been loaded")
             return false
         }
         player?.stop()

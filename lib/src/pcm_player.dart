@@ -7,18 +7,34 @@ const _uuid = Uuid();
 const _channel = const MethodChannel('com.lianke.pcm');
 
 class PCMPlayer {
+  ///当前是否正在播放
   bool get isPlayingNow => _isPlayingNow;
   bool _isPlayingNow = false;
 
   final String playerId;
+
+  ///是否已经销毁
   bool _dispose = false;
 
-  bool _hasSetUp = false;
+  ///是否已经初始化
+  bool get _hasSetUp => _sampleRateInHz != null;
+
+  ///初始化采样率
+  int? _sampleRateInHz;
+
+  ///是否打印日志
+  bool enableLog = true;
 
   PCMPlayer({String? playerId, int? sampleRateInHz})
       : playerId = playerId ?? _uuid.v4() {
     if (sampleRateInHz != null) {
       setUp(sampleRateInHz: sampleRateInHz);
+    }
+  }
+
+  void _printLog(String message) {
+    if (enableLog) {
+      print("[PCMPlayer] $playerId:" + message);
     }
   }
 
@@ -28,13 +44,18 @@ class PCMPlayer {
     int sampleRateInHz = 8000,
   }) async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_hasSetUp) {
+    if (_sampleRateInHz != null) {
+      if (_sampleRateInHz != sampleRateInHz) {
+        _printLog("播放器已经初始化，采样率为$_sampleRateInHz");
+      }
       return;
     }
     _dispose = false;
-    _hasSetUp = true;
+    _sampleRateInHz = sampleRateInHz;
+    _printLog("初始化播放器,采样率$sampleRateInHz");
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,
@@ -44,9 +65,15 @@ class PCMPlayer {
   ///开始播放
   Future<void> play() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_dispose || !_hasSetUp) {
+    if (_dispose) {
+      _printLog("播放器已销毁");
+      return;
+    }
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
       return;
     }
     if (_isPlayingNow) {
@@ -57,6 +84,11 @@ class PCMPlayer {
           "playerId": playerId,
         }) ??
         false;
+    if (_isPlayingNow) {
+      _printLog("开始播放");
+    } else {
+      _printLog("开始播放失败");
+    }
   }
 
   /**
@@ -64,9 +96,15 @@ class PCMPlayer {
    */
   Future<void> feed(Uint8List data) async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_dispose || !_hasSetUp) {
+    if (_dispose) {
+      _printLog("播放器已销毁");
+      return;
+    }
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
       return;
     }
     return _channel.invokeMethod("feedPlaying", {
@@ -78,10 +116,19 @@ class PCMPlayer {
   ///停止播放(不销毁播放器)
   Future<void> stop() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_dispose || !_hasSetUp) {
+    if (_dispose) {
+      _printLog("播放器已销毁");
       return;
+    }
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
+      return;
+    }
+    if (_isPlayingNow) {
+      _printLog("结束播放");
     }
     _isPlayingNow = false;
     await _channel.invokeMethod("pausePlaying", {
@@ -92,12 +139,21 @@ class PCMPlayer {
   ///结束播放(销毁播放器)
   Future<void> release() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_dispose || !_hasSetUp) {
+    if (_dispose) {
+      _printLog("播放器已销毁");
       return;
     }
-    _hasSetUp = false;
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
+      return;
+    }
+    if (_isPlayingNow) {
+      _printLog("结束播放");
+    }
+    _sampleRateInHz = null;
     _dispose = true;
     _isPlayingNow = false;
     await _channel.invokeMethod("stopPlaying", {
@@ -108,9 +164,15 @@ class PCMPlayer {
   ///清空播放数据
   Future<void> clear() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return;
     }
-    if (_dispose || !_hasSetUp) {
+    if (_dispose) {
+      _printLog("播放器已经销毁");
+      return;
+    }
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
       return;
     }
     await _channel.invokeMethod("clearPlaying", {
@@ -121,6 +183,15 @@ class PCMPlayer {
   ///是否正在播放
   Future<bool> get isPlaying async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
+      return false;
+    }
+    if (_dispose) {
+      _printLog("播放器已经销毁");
+      return false;
+    }
+    if (!_hasSetUp) {
+      _printLog("播放器未初始化");
       return false;
     }
     return await _channel.invokeMethod("isPlaying", {
@@ -131,6 +202,7 @@ class PCMPlayer {
   ///剩余播放帧长度
   Future<int> remainingFrames() async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+      print("not support platform");
       return 0;
     }
     return await _channel.invokeMethod("remainingFrames", {

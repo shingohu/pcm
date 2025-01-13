@@ -18,6 +18,7 @@ import androidx.core.content.PermissionChecker;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
@@ -32,6 +33,7 @@ import io.flutter.plugin.common.PluginRegistry;
  * PcmPlugin
  */
 public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler, ActivityAware, PluginRegistry.RequestPermissionsResultListener {
+
     private MethodChannel pcmMethodChannel;
     private EventChannel pcmStreamChannel;
     private EventChannel.EventSink pcmStreamSink;
@@ -62,7 +64,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
         if ("startRecording".equals(method)) {
             if (!checkRecordPermission(applicationContext)) {
-                PCMLib.print("没有录音权限");
+                Log.e("[PCMRecorder]","没有录音权限");
                 result.success(false);
                 return;
             }
@@ -85,19 +87,12 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             requestRecordPermission(result);
         } else if ("checkRecordPermission".equals(method)) {
             result.success(checkRecordPermission(applicationContext));
-        } else if ("enableLog".equals(method)) {
-            PCMLib.enableLog = call.argument("enableLog");
-            result.success(true);
         }
-
-
         ///player
         else if ("setUpPlayer".equals(method)) {
             int sampleRateInHz = call.argument("sampleRateInHz");
             String playerId = call.argument("playerId");
-            if (players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer已经初始化");
-            } else {
+            if (!players.containsKey(playerId)) {
                 PCMPlayer player = new PCMPlayer();
                 player.setUp(sampleRateInHz);
                 players.put(playerId, player);
@@ -106,7 +101,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("startPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
                 result.success(false);
             } else {
                 players.get(playerId).start();
@@ -115,7 +109,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("pausePlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
                 result.success(false);
             } else {
                 players.get(playerId).pause();
@@ -124,7 +117,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("isPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
                 result.success(false);
             } else {
                 result.success(players.get(playerId).isPlaying());
@@ -132,7 +124,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("stopPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
                 result.success(false);
             } else {
                 players.get(playerId).stop();
@@ -141,26 +132,21 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             }
         } else if ("clearPlaying".equals(method)) {
             String playerId = call.argument("playerId");
-            if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
-            } else {
+            if (players.containsKey(playerId)) {
                 players.get(playerId).clear();
             }
             result.success(true);
         } else if ("remainingFrames".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
                 result.success(0);
             } else {
                 result.success(players.get(playerId).remainingFrames());
             }
         } else if ("feedPlaying".equals(method)) {
             String playerId = call.argument("playerId");
-            byte[] data = call.argument("data");
-            if (!players.containsKey(playerId)) {
-                PCMLib.print(playerId + " PCMPlayer未初始化");
-            } else {
+            if (players.containsKey(playerId)) {
+                byte[] data = call.argument("data");
                 players.get(playerId).feed(data);
             }
             result.success(true);

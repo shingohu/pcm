@@ -19,6 +19,8 @@ class _InnerBeepPlayer {
       return (await _channel
               .invokeMethod<bool>("loadSound", {"soundPath": assetPath})) ??
           false;
+    } else {
+      print("[BeepPlayer] not support platform");
     }
     return false;
   }
@@ -28,6 +30,8 @@ class _InnerBeepPlayer {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return (await _channel
           .invokeMethod("playSound", {"soundPath": assetPath}));
+    } else {
+      print("[BeepPlayer] not support platform");
     }
   }
 
@@ -36,6 +40,8 @@ class _InnerBeepPlayer {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return (await _channel
           .invokeMethod("stopSound", {"soundPath": assetPath}));
+    } else {
+      print("[BeepPlayer] not support platform");
     }
   }
 }

@@ -6,7 +6,6 @@
 //
 
 #import "PCMRecorder.h"
-#import "Log.h"
 
 
 
@@ -84,9 +83,7 @@
             [self stop];
             return  NO;
         }
-        
         self.isRunning = YES;
-        [self printLog:@"开始录音"];
     }
     return YES;
 }
@@ -104,15 +101,8 @@
     if(self.isRunning){
         self.isRunning = NO;
         self.audioCallBack(nil);
-        [self printLog:@"结束录音"];
     }
 }
-
-
--(void)printLog:(NSString*)log{
-    [Log print:log];
-}
-
 
 
 - (NSInteger)getNowDateFormatInteger{

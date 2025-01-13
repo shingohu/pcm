@@ -24,7 +24,7 @@ public class BeepPlayer {
             @Override
             public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
                 if (status != 0) {
-                    Log.e("[BeepPlayer]", "sound load error" + sampleId);
+                    Log.e("[BeepPlayer]", sampleId + " sound file load error " + status);
                 } else {
                     soundPool.play(sampleId, 0, 0, sampleId, 0, 2);
                 }

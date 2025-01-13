@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:pcm/pcm.dart';
 import 'package:record/record.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
@@ -29,6 +28,15 @@ class _InnerPCMRecorder {
     _useRecordOnPhonePlatform = use;
   }
 
+  ///是否打印日志
+  bool enableLog = true;
+
+  void _printLog(String message) {
+    if (enableLog) {
+      print("[PCMRecorder]:" + message);
+    }
+  }
+
   /**
    * 开始录音
    * [sampleRateInHz] 录音采样率
@@ -48,13 +56,14 @@ class _InnerPCMRecorder {
       bool noiseSuppress = false,
       Function(Uint8List?)? onData}) async {
     if (isRecordingNow) {
-      PCMLib.log("正在录音,请先停止");
+      _printLog("正在录音,请先停止");
       return true;
     }
 
     this._onAudioCallback = onData;
-
+    bool success = false;
     if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
+      _printLog("开始录音");
       List<int> audios = [];
       Completer<bool>? _startCompleter = Completer();
       (await _otherPlatformRecorder.startStream(RecordConfig(
@@ -66,7 +75,6 @@ class _InnerPCMRecorder {
               noiseSuppress: noiseSuppress)))
           .listen((data) {
         if (_startCompleter != null && !_startCompleter.isCompleted) {
-          PCMLib.log("开始录音");
           _startCompleter.complete(true);
         }
         audios.addAll(data.toList());
@@ -84,50 +92,41 @@ class _InnerPCMRecorder {
           _audioListener(Uint8List.fromList(audios));
         }
         _audioListener(null);
-        PCMLib.log("结束录音");
       }, onError: (e) {
+        _printLog("录音失败");
         print(e);
         if (_startCompleter != null) {
           _startCompleter.complete(false);
         }
       });
-      bool success = await _startCompleter.future;
+      success = await _startCompleter.future;
       _startCompleter = null;
-      if (!success) {
-        this.isRecordingNow = false;
-        _stopCompleter = null;
-        return false;
-      } else {
-        this.isRecordingNow = true;
-        if (_stopCompleter == null) {
-          _stopCompleter = Completer();
-        }
-      }
-      return success;
-    }
-
-    if ((Platform.isAndroid || Platform.isIOS)) {
-      bool success = await _channel.invokeMethod("startRecording", {
+    } else if ((Platform.isAndroid || Platform.isIOS)) {
+      _printLog("开始录音");
+      success = await _channel.invokeMethod("startRecording", {
         "sampleRateInHz": sampleRateInHz,
         "preFrameSize": preFrameSize,
         "enableAEC": echoCancel,
         "autoGain": autoGain,
         "noiseSuppress": noiseSuppress,
       });
-      if (!success) {
-        this.isRecordingNow = false;
-        _stopCompleter = null;
-        return false;
-      } else {
-        this.isRecordingNow = true;
-        if (_stopCompleter == null) {
-          _stopCompleter = Completer();
-        }
-      }
+    } else {
+      print("not support platform");
       return false;
     }
 
-    return false;
+    if (!success) {
+      _printLog("开始录音失败");
+      this.isRecordingNow = false;
+      _stopCompleter = null;
+      return false;
+    } else {
+      this.isRecordingNow = true;
+      if (_stopCompleter == null) {
+        _stopCompleter = Completer();
+      }
+    }
+    return success;
   }
 
   _InnerPCMRecorder._() {
@@ -147,7 +146,6 @@ class _InnerPCMRecorder {
       isRecordingNow = false;
       if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
         _stopCompleter?.complete();
-        _stopCompleter = null;
       }
     } else {
       isRecordingNow = true;
@@ -175,6 +173,7 @@ class _InnerPCMRecorder {
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
       _stopCompleter = null;
+      print("结束录音");
     }
     isRecordingNow = false;
   }

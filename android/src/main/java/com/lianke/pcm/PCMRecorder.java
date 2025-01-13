@@ -12,6 +12,7 @@ import android.media.audiofx.AutomaticGainControl;
 import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 import android.os.Process;
+import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -144,7 +145,6 @@ public class PCMRecorder {
         if (mAudioHandleRunner != null) {
             return;
         }
-        print("开始录音");
         mAudioHandleRunner = new Thread() {
             @Override
             public void run() {
@@ -180,7 +180,6 @@ public class PCMRecorder {
                 if (recordListener != null) {
                     recordListener.onAudioProcess(null);
                 }
-                print("结束录音");
             }
         };
         mAudioHandleRunner.setPriority(MAX_PRIORITY);
@@ -265,6 +264,6 @@ public class PCMRecorder {
     }
 
     private static void print(String msg) {
-        PCMLib.print(msg);
+        Log.e("[PCMRecorder]", msg);
     }
 }

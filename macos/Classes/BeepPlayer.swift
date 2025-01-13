@@ -32,31 +32,27 @@ class BeepPlayer :NSObject, AVAudioPlayerDelegate{
         if(_audioPlayers[filePath] != nil){
             return true
         }
-        let assetKey: String = self._registrar!.lookupKey(forAsset: filePath)
-    
-    
+
         //https://github.com/flutter/flutter/issues/47681
         let flutterBundleId = "io.flutter.flutter.app"
         let flutterAssetsDirectory = "flutter_assets"
         guard let flutterBundle = Bundle(identifier: flutterBundleId) else {
-            Log.print("Could not get Flutter App bundle with ID: \(flutterBundleId)")
+            print("Could not get Flutter App bundle with ID: \(flutterBundleId)")
             return false
         }
         guard
             let assetURL = flutterBundle.url(forResource: filePath, withExtension: nil, subdirectory: flutterAssetsDirectory)
         else {
-            Log.print("Could not get resource URL! \(filePath)")
+            print("Could not get resource URL! \(filePath)")
             return false
         }
         guard let audioPlayer: AVAudioPlayer = try? AVAudioPlayer(contentsOf: assetURL) else {
-            Log.print("Failed to initialize AVAudioPlayer for \(filePath)")
+            print("Failed to initialize AVAudioPlayer for \(filePath)")
             return false
         }        
         let isSuccess: Bool = audioPlayer.prepareToPlay()
         if(!isSuccess){
-            Log.print("Failed to prepare AVAudioPlayer to play \(filePath)")
-        }else{
-            Log.print("Successfully prepared AVAudioPlayer to play \(filePath)")
+            print("Failed to prepare AVAudioPlayer to play \(filePath)")
         }
         audioPlayer.delegate = self
         self._audioPlayers[filePath] = audioPlayer
@@ -68,7 +64,7 @@ class BeepPlayer :NSObject, AVAudioPlayerDelegate{
         let player = _audioPlayers[filePath]
         
         if(player == nil){
-            Log.print("\(filePath) has not been loaded")
+            print("\(filePath) has not been loaded")
             return false
         }
         player?.stop()

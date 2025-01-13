@@ -107,7 +107,6 @@ public class PCMPlayer {
         if (mPlayer == null) {
             return;
         }
-        print("开始播放");
         mAudioPlayingRunner = new Thread(() -> {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
@@ -122,7 +121,6 @@ public class PCMPlayer {
                     }
                 }
             }
-            print("结束播放");
         });
         mAudioPlayingRunner.setPriority(Thread.MAX_PRIORITY);
         mAudioPlayingRunner.start();
@@ -188,10 +186,6 @@ public class PCMPlayer {
     }
 
 
-    private static void print(String msg) {
-        PCMLib.print(msg);
-    }
-
     private void mSamplesClear() {
         samplesLock.lock();
         mSampleBuffer.clear();
@@ -256,5 +250,6 @@ public class PCMPlayer {
             mAudioPlayingRunner = null;
         }
     }
+
 
 }
