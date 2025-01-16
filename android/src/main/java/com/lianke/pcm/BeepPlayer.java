@@ -60,6 +60,7 @@ public class BeepPlayer {
             AssetFileDescriptor fileDescriptor = assetManager.openFd(assetPath);
             int soundId = soundPool.load(fileDescriptor, 1);
             soundMap.put(filaPath, soundId);
+            fileDescriptor.close();
             return true;
         } catch (IOException e) {
             e.printStackTrace();
