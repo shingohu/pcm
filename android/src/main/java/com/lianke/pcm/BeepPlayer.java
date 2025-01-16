@@ -60,6 +60,7 @@ public class BeepPlayer {
             AssetFileDescriptor fileDescriptor = assetManager.openFd(assetPath);
             int soundId = soundPool.load(fileDescriptor, 1);
             soundMap.put(filaPath, soundId);
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -83,7 +84,7 @@ public class BeepPlayer {
 
     private SoundPool soundPool = new SoundPool.Builder().setMaxStreams(10)
             .setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .build())
             .build();
 
