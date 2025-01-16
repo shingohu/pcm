@@ -47,7 +47,7 @@ public class PCMRecorder {
 
     private Thread mAudioHandleRunner = null;
     private RecordListener recordListener;
-    private ByteArrayOutputStream mSampleBuffer = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream mSampleBuffer = new ByteArrayOutputStream();
     private int readBufferIndex = 0;
 
     public void setRecordListener(RecordListener recordListener) {
@@ -115,18 +115,18 @@ public class PCMRecorder {
         return success;
     }
 
-    public boolean isRecording() {
+    public synchronized boolean isRecording() {
         return isRecording;
     }
 
-    public boolean start() {
+    public synchronized boolean start() {
         try {
             if (isRecording) {
                 return true;
             }
             if (mAudioRecord != null) {
-                mAudioRecord.startRecording();
                 isRecording = true;
+                mAudioRecord.startRecording();
                 startRecordingRunner();
             } else {
                 print("请先初始化录音器");

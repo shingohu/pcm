@@ -26,12 +26,13 @@ class _InnerBeepPlayer {
   }
 
   ///播放asset文件
-  Future<void> play(String assetPath) async {
+  Future<bool> play(String assetPath) async {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return (await _channel
           .invokeMethod("playSound", {"soundPath": assetPath}));
     } else {
       print("[BeepPlayer] not support platform");
+      return false;
     }
   }
 

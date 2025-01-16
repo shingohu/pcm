@@ -26,7 +26,7 @@ public class BeepPlayer {
                 if (status != 0) {
                     Log.e("[BeepPlayer]", sampleId + " sound file load error " + status);
                 } else {
-                    soundPool.play(sampleId, 0, 0, sampleId, 0, 2);
+                    soundPool.play(sampleId, 0, 0, 1, 0, 1);
                 }
             }
         });
