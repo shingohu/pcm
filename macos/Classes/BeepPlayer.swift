@@ -60,18 +60,21 @@ class BeepPlayer :NSObject, AVAudioPlayerDelegate{
     }
     
     
-    func play(filePath:String)->Bool{
+
+    func play(filePath:String,volume:Float,loop:Int)->Bool{
         let player = _audioPlayers[filePath]
-        
+
         if(player == nil){
             print("\(filePath) has not been loaded")
             return false
         }
         player?.stop()
         player?.currentTime = 0
-        player?.volume = 1
+        player?.volume = volume
+        player?.numberOfLoops = loop
         return player!.play()
     }
+
     
     func stop(filePath:String){
         let player = _audioPlayers[filePath]

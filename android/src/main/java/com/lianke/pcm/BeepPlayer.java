@@ -68,9 +68,9 @@ public class BeepPlayer {
         return false;
     }
 
-    public boolean play(String filePath) {
+    public boolean play(String filePath,float volume,int loop) {
         if (soundMap.containsKey(filePath)) {
-            return soundPool.play(soundMap.get(filePath), 1, 1, 1000, 0, 1) != 0;
+            return soundPool.play(soundMap.get(filePath), volume, volume, 1000, loop, 1) != 0;
         } else {
             Log.e("[BeepPlayer]", "the " + filePath + " is not loaded");
         }

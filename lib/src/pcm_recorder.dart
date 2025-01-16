@@ -173,7 +173,7 @@ class _InnerPCMRecorder {
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
       _stopCompleter = null;
-      print("结束录音");
+      _printLog("结束录音");
     }
     isRecordingNow = false;
   }

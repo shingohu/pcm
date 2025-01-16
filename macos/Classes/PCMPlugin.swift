@@ -154,7 +154,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
             
         } else if ("playSound" == method) {
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            result(BeepPlayer.shared.play(filePath: soundPath))
+            let loop =  (call.arguments as! Dictionary<String, Any>)["loop"] as! Int
+            let volume =  (call.arguments as! Dictionary<String, Any>)["volume"] as! NSNumber
+            let success = BeepPlayer.shared.play(filePath: soundPath,volume: volume.floatValue,loop: loop)
+            result(success)
         } else if ("stopSound" == (method)) {
             let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
             BeepPlayer.shared.stop(filePath: soundPath)

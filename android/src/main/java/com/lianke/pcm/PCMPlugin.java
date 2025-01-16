@@ -64,7 +64,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
         if ("startRecording".equals(method)) {
             if (!checkRecordPermission(applicationContext)) {
-                Log.e("[PCMRecorder]","没有录音权限");
+                Log.e("[PCMRecorder]", "没有录音权限");
                 result.success(false);
                 return;
             }
@@ -162,7 +162,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             }).start();
         } else if ("playSound".equals(method)) {
             String path = call.argument("soundPath");
-            result.success(BeepPlayer.shared().play(path));
+            Double volume = call.argument("volume");
+            int loop = call.argument("loop");
+            result.success(BeepPlayer.shared().play(path, volume.floatValue(), loop));
         } else if ("stopSound".equals(method)) {
             String path = call.argument("soundPath");
             BeepPlayer.shared().stop(path);
