@@ -98,6 +98,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         ///player
         else if ("setUpPlayer".equals(method)) {
             int sampleRateInHz = call.argument("sampleRateInHz");
+            int streamType = call.argument("streamType");
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 PCMPlayer player = new PCMPlayer();

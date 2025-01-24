@@ -6,6 +6,20 @@ import 'package:uuid/uuid.dart';
 const _uuid = Uuid();
 const _channel = const MethodChannel('com.lianke.pcm');
 
+///the type of the audio stream [only android]
+enum AudioStreamType {
+  voice_call(0),
+  system(1),
+  ring(2),
+  music(3),
+  alarm(4),
+  notification(5);
+
+  final int value;
+
+  const AudioStreamType(this.value);
+}
+
 class PCMPlayer {
   ///当前是否正在播放
   bool get isPlayingNow => _isPlayingNow;
@@ -25,11 +39,12 @@ class PCMPlayer {
   ///是否打印日志
   bool enableLog = true;
 
-  PCMPlayer({String? playerId, int sampleRateInHz = 8000})
+  PCMPlayer(
+      {String? playerId,
+      int sampleRateInHz = 8000,
+      AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
-    if (sampleRateInHz != null) {
-      setUp(sampleRateInHz: sampleRateInHz);
-    }
+    setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
   }
 
   void _printLog(String message) {
@@ -40,8 +55,10 @@ class PCMPlayer {
 
   ///初始化播放器
   ///[sampleRateInHz]采样率
+  ///[streamType] the type of the audio stream [only android]
   Future<void> setUp({
     int sampleRateInHz = 8000,
+    AudioStreamType streamType = AudioStreamType.music,
   }) async {
     if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
       print("not support platform");
@@ -59,6 +76,7 @@ class PCMPlayer {
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,
+      "streamType": streamType,
     });
   }
 
@@ -81,8 +99,8 @@ class PCMPlayer {
     }
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-      "playerId": playerId,
-    }) ??
+          "playerId": playerId,
+        }) ??
         false;
     if (_isPlayingNow) {
       _printLog("开始播放");

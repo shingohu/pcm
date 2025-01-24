@@ -48,8 +48,7 @@ public class PCMPlayer {
     }
 
 
-    public void setUp(int sampleRateInHz) {
-        int streamType = STREAM_MUSIC;
+    public void setUp(int sampleRateInHz,int streamType) {
         if (mPlayer != null) {
             if (mPlayer.getSampleRate() != sampleRateInHz) {
                 stop();
