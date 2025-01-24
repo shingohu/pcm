@@ -3,6 +3,7 @@ package com.lianke.pcm;
 import static java.lang.Thread.MAX_PRIORITY;
 
 import android.annotation.SuppressLint;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -49,6 +50,8 @@ public class PCMRecorder {
     private RecordListener recordListener;
     private final ByteArrayOutputStream mSampleBuffer = new ByteArrayOutputStream();
     private int readBufferIndex = 0;
+
+    private AudioDeviceInfo audioDeviceInfo;
 
     public void setRecordListener(RecordListener recordListener) {
         this.recordListener = recordListener;
@@ -206,6 +209,21 @@ public class PCMRecorder {
         stopRecordingRunner();
         isRecording = false;
         mAudioRecord = null;
+        audioDeviceInfo = null;
+    }
+
+    public void setPreferredDevice(AudioDeviceInfo audioDeviceInfo) {
+        if (audioDeviceInfo != null) {
+            if (mAudioRecord != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    mAudioRecord.setPreferredDevice(audioDeviceInfo);
+                }
+            } else {
+                this.audioDeviceInfo = audioDeviceInfo;
+            }
+        } else {
+            this.audioDeviceInfo = null;
+        }
     }
 
 

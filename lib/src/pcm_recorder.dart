@@ -198,4 +198,13 @@ class _InnerPCMRecorder {
     }
     return false;
   }
+
+  ///设置录音首选设备
+  ///only android
+  Future<void> setPreferredDevice(int deviceId) async {
+    if (Platform.isAndroid) {
+      return await _channel
+          .invokeMethod("setRecordPreferredDevice", {"deviceId": deviceId});
+    }
+  }
 }

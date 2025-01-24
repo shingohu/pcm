@@ -1,11 +1,14 @@
 package com.lianke.pcm;
 
 
+import static android.media.AudioManager.GET_DEVICES_INPUTS;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 
 import android.content.pm.PackageManager;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -82,6 +85,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             result.success(PCMRecorder.shared().isRecording());
         } else if ("stopRecording".equals(method)) {
             PCMRecorder.shared().stop();
+            result.success(true);
+        } else if ("setRecordPreferredDevice".equals(method)) {
+            int deviceId = call.argument("deviceId");
+            PCMRecorder.shared().setPreferredDevice(findInputAudioDevice(deviceId));
             result.success(true);
         } else if ("requestRecordPermission".equals(method)) {
             requestRecordPermission(result);
@@ -181,9 +188,28 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     }
 
 
+    AudioDeviceInfo findInputAudioDevice(int id) {
+        if (applicationContext != null) {
+            AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
+            AudioDeviceInfo[] allDeviceInfo = new AudioDeviceInfo[0];
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                allDeviceInfo = audioManager.getDevices(GET_DEVICES_INPUTS);
+                for (AudioDeviceInfo device : allDeviceInfo) {
+                    if (device.getId() == id) {
+                        return device;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     private boolean isTelephoneCalling() {
-        AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
-        return audioManager.getMode() == AudioManager.MODE_IN_CALL;
+        if (applicationContext != null) {
+            AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
+            return audioManager.getMode() == AudioManager.MODE_IN_CALL;
+        }
+        return false;
     }
 
     void clearAllPlayer() {
