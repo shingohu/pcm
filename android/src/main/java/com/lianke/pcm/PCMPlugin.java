@@ -164,7 +164,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             String path = call.argument("soundPath");
             Double volume = call.argument("volume");
             int loop = call.argument("loop");
-            result.success(BeepPlayer.shared().play(path, volume.floatValue(), loop));
+
+            boolean reload = call.argument("reload");
+            if (reload) {
+                result.success(BeepPlayer.shared().loadAndPlay(path, volume.floatValue(), loop));
+            } else {
+                result.success(BeepPlayer.shared().play(path, volume.floatValue(), loop));
+            }
         } else if ("stopSound".equals(method)) {
             String path = call.argument("soundPath");
             BeepPlayer.shared().stop(path);

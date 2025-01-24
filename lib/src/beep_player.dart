@@ -17,7 +17,7 @@ class _InnerBeepPlayer {
   Future<bool> load(String assetPath) async {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return (await _channel
-              .invokeMethod<bool>("loadSound", {"soundPath": assetPath})) ??
+          .invokeMethod<bool>("loadSound", {"soundPath": assetPath})) ??
           false;
     } else {
       print("[BeepPlayer] not support platform");
@@ -26,10 +26,17 @@ class _InnerBeepPlayer {
   }
 
   ///播放asset文件
-  Future<bool> play(String assetPath, {double volume = 1, int loop = 0}) async {
+  ///reload仅适用android某些情况下播报没声音,重新加载播放
+  Future<bool> play(String assetPath,
+      {double volume = 1, int loop = 0, bool reload = false}) async {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return (await _channel.invokeMethod("playSound",
-          {"soundPath": assetPath, "volume": volume, "loop": loop}));
+          {
+            "soundPath": assetPath,
+            "volume": volume,
+            "loop": loop,
+            "reload": reload
+          }));
     } else {
       print("[BeepPlayer] not support platform");
       return false;

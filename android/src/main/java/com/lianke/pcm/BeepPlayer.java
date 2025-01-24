@@ -20,16 +20,7 @@ public class BeepPlayer {
     private static final BeepPlayer instance = new BeepPlayer();
 
     private BeepPlayer() {
-        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
-            @Override
-            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
-                if (status != 0) {
-                    Log.e("[BeepPlayer]", sampleId + " sound file load error " + status);
-                } else {
-                    soundPool.play(sampleId, 0, 0, 1, 0, 1);
-                }
-            }
-        });
+
     }
 
     public static BeepPlayer shared() {
@@ -58,7 +49,7 @@ public class BeepPlayer {
             }
             String assetPath = flutterAssets.getAssetFilePathByName(filaPath);
             AssetFileDescriptor fileDescriptor = assetManager.openFd(assetPath);
-            int soundId = soundPool.load(fileDescriptor, 1);
+            int soundId = soundPool.load(fileDescriptor, Integer.MAX_VALUE);
             soundMap.put(filaPath, soundId);
             fileDescriptor.close();
             return true;
@@ -68,13 +59,33 @@ public class BeepPlayer {
         return false;
     }
 
-    public boolean play(String filePath,float volume,int loop) {
+    public boolean play(String filePath, float volume, int loop) {
         if (soundMap.containsKey(filePath)) {
             return soundPool.play(soundMap.get(filePath), volume, volume, 1000, loop, 1) != 0;
         } else {
             Log.e("[BeepPlayer]", "the " + filePath + " is not loaded");
         }
         return false;
+    }
+
+    public boolean loadAndPlay(String filePath, float volume, int loop) {
+        try {
+            soundPool.setOnLoadCompleteListener((soundPool, sampleId, status) -> {
+                if (status != 0) {
+                    Log.e("[BeepPlayer]", sampleId + " sound file load error " + status);
+                } else {
+                    soundPool.play(sampleId, volume, volume, 1000, loop, 1);
+                }
+            });
+            String assetPath = flutterAssets.getAssetFilePathByName(filePath);
+            AssetFileDescriptor fileDescriptor = assetManager.openFd(assetPath);
+            soundPool.load(fileDescriptor, Integer.MAX_VALUE);
+            fileDescriptor.close();
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
     }
 
     public void stop(String filePath) {

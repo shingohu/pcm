@@ -1,25 +1,50 @@
 PODS:
+  - audio_session (0.0.1):
+    - Flutter
+  - ble_permission (0.0.1):
+    - Flutter
+  - connectivity_plus (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - Flutter (1.0.0)
+  - flutter_blue_plus_ios (0.0.1):
+    - Flutter
   - pcm (0.0.1):
     - Flutter
   - record_darwin (1.0.0):
     - Flutter
 
 DEPENDENCIES:
+  - audio_session (from `.symlinks/plugins/audio_session/ios`)
+  - ble_permission (from `.symlinks/plugins/ble_permission/ios`)
+  - connectivity_plus (from `.symlinks/plugins/connectivity_plus/darwin`)
   - Flutter (from `Flutter`)
+  - flutter_blue_plus_ios (from `.symlinks/plugins/flutter_blue_plus_ios/ios`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
   - record_darwin (from `.symlinks/plugins/record_darwin/ios`)
 
 EXTERNAL SOURCES:
+  audio_session:
+    :path: ".symlinks/plugins/audio_session/ios"
+  ble_permission:
+    :path: ".symlinks/plugins/ble_permission/ios"
+  connectivity_plus:
+    :path: ".symlinks/plugins/connectivity_plus/darwin"
   Flutter:
     :path: Flutter
+  flutter_blue_plus_ios:
+    :path: ".symlinks/plugins/flutter_blue_plus_ios/ios"
   pcm:
     :path: ".symlinks/plugins/pcm/ios"
   record_darwin:
     :path: ".symlinks/plugins/record_darwin/ios"
 
 SPEC CHECKSUMS:
+  audio_session: 088d2483ebd1dc43f51d253d4a1c517d9a2e7207
+  ble_permission: 30707674e2c8e85ba3aeb06cecf9051a3c6a4b13
+  connectivity_plus: 18382e7311ba19efcaee94442b23b32507b20695
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  flutter_blue_plus_ios: f386838850d88ac003ea3cf535b07fa3141931a7
   pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
   record_darwin: 3b1a8e7d5c0cbf45ad6165b4d83a6ca643d929c3
 

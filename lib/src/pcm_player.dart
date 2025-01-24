@@ -25,7 +25,7 @@ class PCMPlayer {
   ///是否打印日志
   bool enableLog = true;
 
-  PCMPlayer({String? playerId, int? sampleRateInHz})
+  PCMPlayer({String? playerId, int sampleRateInHz = 8000})
       : playerId = playerId ?? _uuid.v4() {
     if (sampleRateInHz != null) {
       setUp(sampleRateInHz: sampleRateInHz);
@@ -81,8 +81,8 @@ class PCMPlayer {
     }
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-          "playerId": playerId,
-        }) ??
+      "playerId": playerId,
+    }) ??
         false;
     if (_isPlayingNow) {
       _printLog("开始播放");
