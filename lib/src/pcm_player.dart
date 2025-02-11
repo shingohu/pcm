@@ -76,7 +76,7 @@ class PCMPlayer {
     return _channel.invokeMethod("setUpPlayer", {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,
-      "streamType": streamType,
+      "streamType": streamType.value,
     });
   }
 
