@@ -1,7 +1,6 @@
 import Flutter
 import UIKit
 import AVFoundation
-import CoreTelephony
 
 
 public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicationDelegate {

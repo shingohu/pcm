@@ -19,7 +19,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
         pcmStreamChannel.setStreamHandler(instance)
         registrar.addMethodCallDelegate(instance, channel: pcmMethodChannel)
         registrar.addApplicationDelegate(instance)
-        BeepPlayer.shared.setUp(register: registrar)
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     

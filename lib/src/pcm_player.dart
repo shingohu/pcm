@@ -49,7 +49,7 @@ class PCMPlayer {
 
   void _printLog(String message) {
     if (enableLog) {
-      print("[PCMPlayer] $playerId:" + message);
+      print("[PCMPlayer]" + message);
     }
   }
 
