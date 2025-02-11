@@ -56,8 +56,6 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         pcmMethodChannel.setMethodCallHandler(this);
         pcmStreamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm.stream");
         pcmStreamChannel.setStreamHandler(this);
-
-        BeepPlayer.shared().init(flutterPluginBinding.getApplicationContext().getAssets(), flutterPluginBinding.getFlutterAssets());
         setPCMListener();
     }
 
@@ -102,7 +100,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 PCMPlayer player = new PCMPlayer();
-                player.setUp(sampleRateInHz);
+                player.setUp(sampleRateInHz, streamType);
                 players.put(playerId, player);
             }
             result.success(true);
@@ -159,32 +157,8 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             }
             result.success(true);
         } else if ("hotRestart".equals(method)) {
-            PCMRecorder.shared().stop();
-            clearAllPlayer();
+            hotRestart();
             result.success(true);
-        } else if ("loadSound".equals(method)) {
-            String path = call.argument("soundPath");
-            new Thread(() -> {
-                boolean success = BeepPlayer.shared().load(path);
-                uiHandler.post(() -> result.success(success));
-            }).start();
-        } else if ("playSound".equals(method)) {
-            String path = call.argument("soundPath");
-            Double volume = call.argument("volume");
-            int loop = call.argument("loop");
-
-            boolean reload = call.argument("reload");
-            if (reload) {
-                result.success(BeepPlayer.shared().loadAndPlay(path, volume.floatValue(), loop));
-            } else {
-                result.success(BeepPlayer.shared().play(path, volume.floatValue(), loop));
-            }
-        } else if ("stopSound".equals(method)) {
-            String path = call.argument("soundPath");
-            BeepPlayer.shared().stop(path);
-            result.success(true);
-        } else if ("isTelephoneCalling".equals(method)) {
-            result.success(isTelephoneCalling());
         }
     }
 
@@ -205,12 +179,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         return null;
     }
 
-    private boolean isTelephoneCalling() {
-        if (applicationContext != null) {
-            AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
-            return audioManager.getMode() == AudioManager.MODE_IN_CALL;
-        }
-        return false;
+
+    void hotRestart() {
+        PCMRecorder.shared().stop();
+        clearAllPlayer();
     }
 
     void clearAllPlayer() {
@@ -222,8 +194,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-        PCMRecorder.shared().stop();
-        clearAllPlayer();
+        hotRestart();
         pcmMethodChannel.setMethodCallHandler(null);
         pcmStreamChannel.setStreamHandler(null);
         pcmStreamSink = null;

@@ -4,7 +4,7 @@ import 'package:pcm/pcm.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await PCMLib.hotRestart();
+  await PCMHotRestart();
   runApp(const MyApp());
 }
 

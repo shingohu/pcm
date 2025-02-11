@@ -140,29 +140,6 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
             clearAllPlayer()
             result(true)
         }
-        
-        else if ("loadSound" == method) {
-            
-            DispatchQueue.global(qos: .userInitiated).async {
-                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-                let success = BeepPlayer.shared.load(filePath: soundPath)
-                           // 回到主线程更新UI
-                           DispatchQueue.main.async{
-                               result(success)
-                           }
-            }
-            
-        } else if ("playSound" == method) {
-            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            let loop =  (call.arguments as! Dictionary<String, Any>)["loop"] as! Int
-            let volume =  (call.arguments as! Dictionary<String, Any>)["volume"] as! NSNumber
-            let success = BeepPlayer.shared.play(filePath: soundPath,volume: volume.floatValue,loop: loop)
-            result(success)
-        } else if ("stopSound" == (method)) {
-            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            BeepPlayer.shared.stop(filePath: soundPath)
-            result(true)
-        }
     }
     
     private func clearAllPlayer(){

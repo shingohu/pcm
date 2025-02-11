@@ -115,6 +115,9 @@ public class PCMRecorder {
         } else {
             success = true;
         }
+        if (success) {
+            setPreferredDevice(audioDeviceInfo);
+        }
         return success;
     }
 

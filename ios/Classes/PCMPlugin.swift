@@ -20,24 +20,12 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
         pcmStreamChannel.setStreamHandler(instance)
         registrar.addMethodCallDelegate(instance, channel: pcmMethodChannel)
         registrar.addApplicationDelegate(instance)
-        let session = AVAudioSession.sharedInstance()
-        
-        if(session.category != .playAndRecord && session.category != .record){
-            do {
-                try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers,])
-            }catch {
-                print(error)
-            }
-        }
-
-        BeepPlayer.shared.setUp(register: registrar)
         PCMRecorderClient.shared.initRecorder(onAudioCallback: instance.recordAudioCallBack)
     }
     
     
     public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
-        PCMRecorderClient.shared.stop()
-        clearAllPlayer()
+         hotRestart()
     }
 
     
@@ -175,57 +163,16 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             result(true)
         }
         else if(method == "hotRestart"){
-            PCMRecorderClient.shared.stop()
-            clearAllPlayer()
+            hotRestart()
             result(true)
         }
-        
-        else if(method == "isTelephoneCalling"){
-            result(self.isTelephoneCalling())
-        }
-        
-        else if ("loadSound" == method) {
-            
-            DispatchQueue.global(qos: .userInitiated).async {
-                let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-                let success = BeepPlayer.shared.load(filePath: soundPath)
-                           // 回到主线程更新UI
-                           DispatchQueue.main.async{
-                               result(success)
-                           }
-            }
-            
-        } else if ("playSound" == method) {
-            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            let loop =  (call.arguments as! Dictionary<String, Any>)["loop"] as! Int
-            let volume =  (call.arguments as! Dictionary<String, Any>)["volume"] as! NSNumber
-            let success = BeepPlayer.shared.play(filePath: soundPath,volume: volume.floatValue,loop: loop)
-            result(success)
-        } else if ("stopSound" == (method)) {
-            let soundPath =  (call.arguments as! Dictionary<String, Any>)["soundPath"] as! String
-            BeepPlayer.shared.stop(filePath: soundPath)
-            result(true)
-        }
-        
-        
     }
     
-    
-    
-    func isTelephoneCalling()->Bool{
-        
-        let callcenter = CTCallCenter()
-        
-        if(callcenter.currentCalls != nil){
-            for call in callcenter.currentCalls! {
-                if(call.callState != CTCallStateDisconnected){
-                    return true
-                }
-            }
-        }
-        return false
-        
+    func hotRestart(){
+        PCMRecorderClient.shared.stop()
+        clearAllPlayer()
     }
+    
     
     
     private func clearAllPlayer(){

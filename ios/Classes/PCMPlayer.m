@@ -48,6 +48,10 @@
         }else{
             self.isRunning = YES;
         }
+    }else{
+        if(_remoteIOUnit == nil){
+            printf(@"remoteIOUnit被销毁了");
+        }
     }
 }
 
