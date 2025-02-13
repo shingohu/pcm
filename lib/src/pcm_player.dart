@@ -39,10 +39,9 @@ class PCMPlayer {
   ///是否打印日志
   bool enableLog = true;
 
-  PCMPlayer(
-      {String? playerId,
-      int sampleRateInHz = 8000,
-      AudioStreamType streamType = AudioStreamType.music})
+  PCMPlayer({String? playerId,
+    int sampleRateInHz = 8000,
+    AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
     setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
   }
@@ -56,6 +55,7 @@ class PCMPlayer {
   ///初始化播放器
   ///[sampleRateInHz]采样率
   ///[streamType] the type of the audio stream [only android]
+  ///iOS上如果启动的时候就初始化,可能会暂停第三方音乐或者导致第三方音乐卡一下
   Future<void> setUp({
     int sampleRateInHz = 8000,
     AudioStreamType streamType = AudioStreamType.music,
@@ -99,8 +99,8 @@ class PCMPlayer {
     }
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-          "playerId": playerId,
-        }) ??
+      "playerId": playerId,
+    }) ??
         false;
     if (_isPlayingNow) {
       _printLog("开始播放");

@@ -41,10 +41,9 @@
 
 - (void)start{
     if(!self.isRunning && _remoteIOUnit != nil){
+        CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
-        if(error){
-            [self stop];
-        }else{
+        if(!error){
             self.isRunning = YES;
         }
     }
@@ -53,6 +52,7 @@
 -(void)pause{
     if(self.isRunning){
         CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
+        AudioUnitUninitialize(_remoteIOUnit);
         self.isRunning = NO;
         [self clear];
     }
@@ -60,17 +60,10 @@
 
 - (void)stop{
     if(_remoteIOUnit != nil){
-        if(self.isRunning){
-            CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
-        }
-        AudioUnitUninitialize(_remoteIOUnit);
+        [self pause];
         AudioComponentInstanceDispose(_remoteIOUnit);
         _remoteIOUnit = nil;
     }
-    if(self.isRunning){
-        self.isRunning = NO;
-    }
-    [self clear];
 }
 
 - (void)feed:(NSData *)data{
@@ -145,11 +138,6 @@
                                     &playCallback,
                                     sizeof(playCallback)),
                "kAudioUnitProperty_SetRenderCallback failed");
-    
-    
-    CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
-    
-    
 }
 
 
