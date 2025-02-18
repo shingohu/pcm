@@ -39,9 +39,10 @@ class PCMPlayer {
   ///是否打印日志
   bool enableLog = true;
 
-  PCMPlayer({String? playerId,
-    int sampleRateInHz = 8000,
-    AudioStreamType streamType = AudioStreamType.music})
+  PCMPlayer(
+      {String? playerId,
+      int sampleRateInHz = 8000,
+      AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
     setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
   }
@@ -52,22 +53,19 @@ class PCMPlayer {
     }
   }
 
+  bool _supportPlatform() {
+    return Platform.isIOS || Platform.isAndroid || Platform.isMacOS;
+  }
+
   ///初始化播放器
   ///[sampleRateInHz]采样率
   ///[streamType] the type of the audio stream [only android]
-  ///iOS上如果启动的时候就初始化,可能会暂停第三方音乐或者导致第三方音乐卡一下
   Future<void> setUp({
     int sampleRateInHz = 8000,
     AudioStreamType streamType = AudioStreamType.music,
   }) async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
-      return;
-    }
-    if (_sampleRateInHz != null) {
-      if (_sampleRateInHz != sampleRateInHz) {
-        _printLog("播放器已经初始化，采样率为$_sampleRateInHz");
-      }
       return;
     }
     _dispose = false;
@@ -82,7 +80,7 @@ class PCMPlayer {
 
   ///开始播放
   Future<void> play() async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return;
     }
@@ -99,13 +97,13 @@ class PCMPlayer {
     }
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-      "playerId": playerId,
-    }) ??
+          "playerId": playerId,
+        }) ??
         false;
     if (_isPlayingNow) {
       _printLog("开始播放");
     } else {
-      _printLog("开始播放失败");
+      _printLog("播放失败");
     }
   }
 
@@ -113,7 +111,7 @@ class PCMPlayer {
    * 以Stream方式持续播放PCM数据
    */
   Future<void> feed(Uint8List data) async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return;
     }
@@ -133,7 +131,7 @@ class PCMPlayer {
 
   ///停止播放(不销毁播放器)
   Future<void> stop() async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return;
     }
@@ -156,7 +154,7 @@ class PCMPlayer {
 
   ///结束播放(销毁播放器)
   Future<void> release() async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return;
     }
@@ -181,7 +179,7 @@ class PCMPlayer {
 
   ///清空播放数据
   Future<void> clear() async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return;
     }
@@ -200,7 +198,7 @@ class PCMPlayer {
 
   ///是否正在播放
   Future<bool> get isPlaying async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return false;
     }
@@ -219,7 +217,7 @@ class PCMPlayer {
 
   ///剩余播放帧长度
   Future<int> remainingFrames() async {
-    if (!Platform.isIOS && !Platform.isAndroid && !Platform.isMacOS) {
+    if (!_supportPlatform()) {
       print("not support platform");
       return 0;
     }

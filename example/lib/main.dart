@@ -4,7 +4,6 @@ import 'package:pcm/pcm.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await PCMHotRestart();
   runApp(const MyApp());
 }
 
@@ -29,8 +28,19 @@ class _MyAppState extends State<MyApp> {
           return Scaffold(
             appBar: AppBar(),
             body: SingleChildScrollView(
-              child: Container(
-                width: double.infinity,
+              child: Column(
+                children: [
+                  TextButton(
+                      onPressed: () {
+                        PCMRecorder.start();
+                      },
+                      child: Text('开始录音')),
+                  TextButton(
+                      onPressed: () {
+                        PCMRecorder.stop();
+                      },
+                      child: Text('结束录音')),
+                ],
               ),
             ),
           );
