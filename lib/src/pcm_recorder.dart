@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:record/record.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
 
@@ -17,17 +16,6 @@ class _InnerPCMRecorder {
   bool isRecordingNow = false;
   Completer? _stopCompleter;
 
-  final _otherPlatformRecorder = AudioRecorder();
-
-  ///移动平台是否使用第三方record库进行录音 默认不使用
-  bool _useRecordOnPhonePlatform = false;
-
-  ///设置移动平台是否使用第三方record库进行录音
-  ///开发时为了对比第三方录音效果使用
-  void useRecordOnMobilePlatform(bool use) {
-    _useRecordOnPhonePlatform = use;
-  }
-
   ///是否打印日志
   bool enableLog = true;
 
@@ -35,6 +23,21 @@ class _InnerPCMRecorder {
     if (enableLog) {
       print("[PCMRecorder]:" + message);
     }
+  }
+
+  _InnerPCMRecorder._() {
+    if (_supportPlatform()) {
+      _pcmStream = _streamChannel
+          .receiveBroadcastStream()
+          .map((buffer) => buffer as Uint8List?);
+      _pcmStream?.listen((data) {
+        _audioListener(data);
+      });
+    }
+  }
+
+  bool _supportPlatform() {
+    return Platform.isIOS || Platform.isAndroid || Platform.isMacOS;
   }
 
   /**
@@ -56,52 +59,13 @@ class _InnerPCMRecorder {
       bool noiseSuppress = false,
       Function(Uint8List?)? onData}) async {
     if (isRecordingNow) {
-      _printLog("正在录音,请先停止");
+      _printLog("正在录音中");
       return true;
     }
 
     this._onAudioCallback = onData;
     bool success = false;
-    if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
-      _printLog("开始录音");
-      List<int> audios = [];
-      Completer<bool>? _startCompleter = Completer();
-      (await _otherPlatformRecorder.startStream(RecordConfig(
-              encoder: AudioEncoder.pcm16bits,
-              echoCancel: echoCancel,
-              sampleRate: sampleRateInHz,
-              numChannels: 1,
-              autoGain: autoGain,
-              noiseSuppress: noiseSuppress)))
-          .listen((data) {
-        if (_startCompleter != null && !_startCompleter.isCompleted) {
-          _startCompleter.complete(true);
-        }
-        audios.addAll(data.toList());
-        while (audios.length >= preFrameSize) {
-          Uint8List pcmData =
-              Uint8List.fromList(audios.sublist(0, preFrameSize));
-          audios.removeRange(0, preFrameSize);
-          _audioListener(pcmData);
-        }
-      }, onDone: () {
-        if (audios.length > 0) {
-          for (int i = audios.length; i < preFrameSize; i++) {
-            audios.add(0);
-          }
-          _audioListener(Uint8List.fromList(audios));
-        }
-        _audioListener(null);
-      }, onError: (e) {
-        _printLog("录音失败");
-        print(e);
-        if (_startCompleter != null) {
-          _startCompleter.complete(false);
-        }
-      });
-      success = await _startCompleter.future;
-      _startCompleter = null;
-    } else if ((Platform.isAndroid || Platform.isIOS)) {
+    if (_supportPlatform()) {
       _printLog("开始录音");
       success = await _channel.invokeMethod("startRecording", {
         "sampleRateInHz": sampleRateInHz,
@@ -129,22 +93,12 @@ class _InnerPCMRecorder {
     return success;
   }
 
-  _InnerPCMRecorder._() {
-    if (Platform.isIOS || Platform.isAndroid) {
-      _pcmStream = _streamChannel
-          .receiveBroadcastStream()
-          .map((buffer) => buffer as Uint8List?);
-      _pcmStream?.listen((data) {
-        _audioListener(data);
-      });
-    }
-  }
-
   void _audioListener(Uint8List? data) {
     _onAudioCallback?.call(data);
     if (data == null) {
       isRecordingNow = false;
       if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
+        _printLog("结束录音");
         _stopCompleter?.complete();
       }
     } else {
@@ -154,10 +108,7 @@ class _InnerPCMRecorder {
 
   ///是否正在录音
   Future<bool> get isRecording async {
-    if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
-      return await _otherPlatformRecorder.isRecording();
-    }
-    if (Platform.isIOS || Platform.isAndroid) {
+    if (_supportPlatform()) {
       return await _channel.invokeMethod("isRecording");
     }
     return false;
@@ -165,25 +116,19 @@ class _InnerPCMRecorder {
 
   ///停止录音
   Future<void> stop() async {
-    if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
-      await _otherPlatformRecorder.stop();
-    } else if (Platform.isIOS || Platform.isAndroid) {
+    if (_supportPlatform()) {
       await _channel.invokeMethod("stopRecording");
     }
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
       _stopCompleter = null;
-      _printLog("结束录音");
     }
     isRecordingNow = false;
   }
 
   ///请求录音权限
   Future<bool> requestRecordPermission() async {
-    if (Platform.isWindows || Platform.isMacOS || _useRecordOnPhonePlatform) {
-      return await _otherPlatformRecorder.hasPermission();
-    }
-    if (Platform.isIOS || Platform.isAndroid) {
+    if (_supportPlatform()) {
       return await _channel.invokeMethod("requestRecordPermission");
     }
     return false;
@@ -191,10 +136,8 @@ class _InnerPCMRecorder {
 
   ///检查录音权限
   Future<bool> checkRecordPermission() async {
-    if (Platform.isIOS || Platform.isAndroid) {
+    if (_supportPlatform()) {
       return await _channel.invokeMethod("checkRecordPermission");
-    } else if (Platform.isWindows || Platform.isMacOS) {
-      return await _otherPlatformRecorder.hasPermission();
     }
     return false;
   }

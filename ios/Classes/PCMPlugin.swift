@@ -27,6 +27,13 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
          hotRestart()
     }
 
+    var isSimulator: Bool {
+           #if targetEnvironment(simulator)
+               return true
+           #else
+               return false
+           #endif
+    }
     
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -55,7 +62,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     
                     if(!PCMRecorder.shared().isRunning){
                         do {
-                            try session.setActive(true)
+                            if(self.isSimulator){
+                                //模拟器必须要先激活,否则会导致录音失败
+                                try session.setActive(true)
+                            }
                         }catch {
                             print("获取焦点失败")
                         }

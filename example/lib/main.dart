@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
@@ -15,6 +17,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  PCMPlayer player = PCMPlayer();
+
   @override
   void initState() {
     super.initState();
@@ -32,7 +36,21 @@ class _MyAppState extends State<MyApp> {
                 children: [
                   TextButton(
                       onPressed: () {
-                        PCMRecorder.start();
+                        List<int> list = [];
+                        PCMRecorder.start(
+                            echoCancel: false,
+                            onData: (data) {
+                              if (data != null) {
+                                list.addAll(data);
+                                if (list.length >= 2 * 16000) {
+                                  player.play();
+                                  player.feed(Uint8List.fromList(list));
+                                  list.clear();
+                                }
+                              } else {
+                                player.stop();
+                              }
+                            });
                       },
                       child: Text('开始录音')),
                   TextButton(

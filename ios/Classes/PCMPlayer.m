@@ -41,7 +41,6 @@
 
 - (void)start{
     if(!self.isRunning && _remoteIOUnit != nil){
-        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:nil];
         CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
         bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
         if(!error){
@@ -135,7 +134,7 @@
     playCallback.inputProcRefCon = (__bridge void *)(self);
     CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                     kAudioUnitProperty_SetRenderCallback,
-                                    kAudioUnitScope_Global,
+                                    kAudioUnitScope_Input,
                                     0,
                                     &playCallback,
                                     sizeof(playCallback)),
