@@ -13,9 +13,10 @@
 
 @implementation PCMPlayer
 {
-    AudioUnit _remoteIOUnit;
+    AudioUnit audioUnit;
     double sampleRate ;
     NSMutableData* mSamples;
+    BOOL initalizeAudioUnitSuccess;
 }
 
 - (instancetype)init
@@ -30,39 +31,61 @@
 
 
 - (void)setUp:(double)sampleRate{
-    if(_remoteIOUnit != nil && self->sampleRate != sampleRate){
+    if(audioUnit != nil && self->sampleRate != sampleRate){
         [self stop];
     }
-    if(_remoteIOUnit == nil){
+    if(audioUnit == nil){
         [self setupRemoteIOUnit:sampleRate];
     }
 }
 
 
 - (void)start{
-    if(!self.isRunning && _remoteIOUnit != nil){
-        CheckError(AudioUnitInitialize(_remoteIOUnit),"Player AudioUnitInitialize error");
-        bool error = CheckError(AudioOutputUnitStart(_remoteIOUnit), "Player AudioOutputUnitStart error");
-        if(!error){
-            self.isRunning = YES;
+    if(!self.isRunning && audioUnit != nil){
+        NSUInteger start = [self getNowDateFormatInteger];
+        [self initalizeAudioUnit];
+        if(initalizeAudioUnitSuccess){
+            bool error = CheckError(AudioOutputUnitStart(audioUnit), "Player AudioOutputUnitStart error");
+            if(!error){
+                self.isRunning = YES;
+            }else{
+                [self unInitalizeAudioUnit];
+            }
         }
     }
 }
 
+
+-(void)initalizeAudioUnit{
+    if(!initalizeAudioUnitSuccess){
+        ///初始化的时候会请求音频焦点的
+        initalizeAudioUnitSuccess =  !CheckError(AudioUnitInitialize(audioUnit),"Player AudioUnitInitialize error");
+    }
+}
+
+-(void)unInitalizeAudioUnit{
+    if(initalizeAudioUnitSuccess){
+        CheckError(AudioUnitUninitialize(audioUnit),"Player AudioUnitUninitialize");
+        initalizeAudioUnitSuccess = NO;
+    }
+}
+
+
+
 -(void)pause{
     if(self.isRunning){
-        CheckError(AudioOutputUnitStop(_remoteIOUnit), "Player AudioOutputUnitStop error");
-        AudioUnitUninitialize(_remoteIOUnit);
+        CheckError(AudioOutputUnitStop(audioUnit), "Player AudioOutputUnitStop error");
         self.isRunning = NO;
         [self clear];
     }
 }
 
 - (void)stop{
-    if(_remoteIOUnit != nil){
+    if(audioUnit != nil){
         [self pause];
-        AudioComponentInstanceDispose(_remoteIOUnit);
-        _remoteIOUnit = nil;
+        [self unInitalizeAudioUnit];
+        AudioComponentInstanceDispose(self->audioUnit);
+        self->audioUnit = nil;
     }
 }
 
@@ -102,7 +125,7 @@
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
     
     // 打开AudioUnit
-    CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"Audio Component Instance New Failed");
+    CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"Audio Component Instance New Failed");
     
     
     
@@ -119,7 +142,7 @@
     audioFormat.mChannelsPerFrame = kChannels;
     
     
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+    CheckError(AudioUnitSetProperty(audioUnit,
                                     kAudioUnitProperty_StreamFormat,
                                     kAudioUnitScope_Input,
                                     0,
@@ -131,7 +154,7 @@
     AURenderCallbackStruct playCallback;
     playCallback.inputProc = _playCallback;
     playCallback.inputProcRefCon = (__bridge void *)(self);
-    CheckError(AudioUnitSetProperty(_remoteIOUnit,
+    CheckError(AudioUnitSetProperty(audioUnit,
                                     kAudioUnitProperty_SetRenderCallback,
                                     kAudioUnitScope_Input,
                                     0,
