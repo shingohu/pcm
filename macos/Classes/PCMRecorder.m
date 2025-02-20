@@ -121,17 +121,16 @@
     if(enableAEC){
         desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
     }else{
-        desc.componentSubType = kAudioUnitSubType_HALOutput;
+        ///暂时先用kAudioUnitSubType_VoiceProcessingIO  其它类型不知道怎么做
+        desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
     }
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
-    
-    
     // Get component
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &desc);
-    
     if(inputComponent != NULL){
+        //kAudioUnitSubType_VoiceProcessingIO 导致这里耗时
         // Get audio units
         BOOL error  = CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"AudioComponentInstanceNew Error");
         if(error){
@@ -271,13 +270,13 @@
     
 
     
-//    error = CheckError(AudioUnitSetProperty(audioUnit,
-//                                  kAudioUnitProperty_StreamFormat,
-//                                  kAudioUnitScope_Input,
-//                                  0,
-//                                  &audioFormat,
-//                                  sizeof(audioFormat)),"Output StreamFormat error");
-//    
+    error = CheckError(AudioUnitSetProperty(audioUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &audioFormat,
+                                  sizeof(audioFormat)),"Output StreamFormat error");
+    
     if(error){
         return NO;
     }
@@ -307,9 +306,9 @@
 }
 
 
--(BOOL)setupBufferFrameSize:(UInt32)bufferSize{
+-(BOOL)setupBufferDuration:(NSTimeInterval)duration{
     
-    UInt32 preferredBufferSize = (( 10 * sampleRate) / 1000); // in bytes
+    UInt32 preferredBufferSize = (( duration * sampleRate) ); // in bytes
     int size = sizeof (preferredBufferSize);
 
     ///设置buffsize的时候，IOS和MAC系统不一样
@@ -324,22 +323,21 @@
     if(audioUnit != nil){
         return YES;
     }
-    
-    
     if(![self setupAudioUnit:enableAEC]){
         return NO;
     }
+    ///100MS
+    [self setupBufferDuration:0.1];
+
     
-    if(![self setupEnableIO]){
-        return NO;
-    }
-    
-    
-    if(!enableAEC){
-        if(![self setupMicInput]){
-            return NO;
-        }
-    }
+//    if(![self setupEnableIO]){
+//        return NO;
+//    }
+//    if(!enableAEC){
+//        if(![self setupMicInput]){
+//            return NO;
+//        }
+//    }
     
     if(![self setupStreamFormat:sampleRate]){
         return NO;
@@ -348,7 +346,8 @@
     if(![self setupInputCallback]){
         return NO;
     }
-
+    
+   
     return YES;
 }
 
@@ -397,7 +396,7 @@ OSStatus _inputCallback(void *inRefCon,
         {
             AudioBuffer buffer = bufferList.mBuffers[0];
             NSData *pcmBlock =[NSData dataWithBytes:buffer.mData length:buffer.mDataByteSize];
-            NSLog(@"获取长度 %lu",(unsigned long)pcmBlock.length);
+            //NSLog(@"获取长度 %lu",(unsigned long)pcmBlock.length);
             audioRecorder.audioCallBack(pcmBlock);
         }
     }

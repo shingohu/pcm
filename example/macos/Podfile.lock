@@ -1,4 +1,6 @@
 PODS:
+  - flutter_recorder (0.0.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - pcm (0.0.1):
     - FlutterMacOS
@@ -6,11 +8,14 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - flutter_recorder (from `Flutter/ephemeral/.symlinks/plugins/flutter_recorder/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - pcm (from `Flutter/ephemeral/.symlinks/plugins/pcm/macos`)
   - record_darwin (from `Flutter/ephemeral/.symlinks/plugins/record_darwin/macos`)
 
 EXTERNAL SOURCES:
+  flutter_recorder:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_recorder/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   pcm:
@@ -19,6 +24,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/record_darwin/macos
 
 SPEC CHECKSUMS:
+  flutter_recorder: 6745e10f0782d6fb98bc5063473a62d10d4971ba
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   pcm: 07b7713d1745ffa1fd12feab2c352ea6d9465155
   record_darwin: a0d515a0ef78c440c123ea3ac76184c9927a94d6

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
+export 'dart:typed_data';
+
 const _uuid = Uuid();
 const _channel = const MethodChannel('com.lianke.pcm');
 

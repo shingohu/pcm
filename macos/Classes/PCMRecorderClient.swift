@@ -100,11 +100,7 @@ class PCMRecorderClient {
         }
     }
     
-    
-    
-    
-    
-    
+   
     private func resetWhenStop(){
         ///结束录制
         self.readPCMDataIndex = 0

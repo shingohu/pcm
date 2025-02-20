@@ -59,8 +59,10 @@ class _InnerPCMRecorder {
       bool noiseSuppress = false,
       Function(Uint8List?)? onData}) async {
     if (isRecordingNow) {
-      _printLog("正在录音中");
-      return true;
+      if (await isRecording) {
+        _printLog("正在录音中");
+        return true;
+      }
     }
 
     this._onAudioCallback = onData;

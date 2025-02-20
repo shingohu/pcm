@@ -1,6 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:pcm/pcm.dart';
 
@@ -19,9 +18,19 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   PCMPlayer player = PCMPlayer();
 
+  final recorder = Recorder.instance;
+
   @override
   void initState() {
+    recorder.init(sampleRate: 8000);
+    recorder.uint8ListStream.listen(onAudio);
     super.initState();
+  }
+
+  void onAudio(AudioDataContainer container) {
+    print(DateTime.now().millisecondsSinceEpoch);
+    player.play();
+    player.feed(container.rawData);
   }
 
   @override
@@ -35,20 +44,24 @@ class _MyAppState extends State<MyApp> {
               child: Column(
                 children: [
                   TextButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        // recorder.startStreamingData();
+                        // print(DateTime.now().millisecondsSinceEpoch);
+                        // recorder.start();
                         List<int> list = [];
                         PCMRecorder.start(
                             echoCancel: false,
                             onData: (data) {
+                              //print(DateTime.now().millisecondsSinceEpoch);
                               if (data != null) {
                                 list.addAll(data);
-                                if (list.length >= 2 * 16000) {
+                                if (list.length >= 16000) {
                                   player.play();
                                   player.feed(Uint8List.fromList(list));
                                   list.clear();
                                 }
                               } else {
-                                player.stop();
+                                player.play();
                               }
                             });
                       },
@@ -56,6 +69,8 @@ class _MyAppState extends State<MyApp> {
                   TextButton(
                       onPressed: () {
                         PCMRecorder.stop();
+                        recorder.stop();
+                        recorder.stopStreamingData();
                       },
                       child: Text('结束录音')),
                 ],

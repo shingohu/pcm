@@ -133,7 +133,7 @@
     playCallback.inputProcRefCon = (__bridge void *)(self);
     CheckError(AudioUnitSetProperty(_remoteIOUnit,
                                     kAudioUnitProperty_SetRenderCallback,
-                                    kAudioUnitScope_Global,
+                                    kAudioUnitScope_Input,
                                     0,
                                     &playCallback,
                                     sizeof(playCallback)),

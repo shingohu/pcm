@@ -41,13 +41,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
                     let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
                     let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
-                    let start = Date().timeIntervalSince1970*1000
                     var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
-                    print("初始耗时\(Date().timeIntervalSince1970*1000-start)")
                     if(success){
-                        let start1 = Date().timeIntervalSince1970*1000
                         success =  PCMRecorderClient.shared.start()
-                        print("初始耗时\(Date().timeIntervalSince1970*1000-start1)")
                     }
                     result(success)
                 }else{
