@@ -16,7 +16,7 @@
     AudioUnit audioUnit;
     double sampleRate ;
     NSMutableData* mSamples;
-    BOOL initalizeAudioUnitSuccess;
+    BOOL hasInitAudioUnit;
 }
 
 - (instancetype)init
@@ -42,39 +42,36 @@
 
 - (void)start{
     if(!self.isRunning && audioUnit != nil){
-        NSUInteger start = [self getNowDateFormatInteger];
-        [self initalizeAudioUnit];
-        if(initalizeAudioUnitSuccess){
-            bool error = CheckError(AudioOutputUnitStart(audioUnit), "Player AudioOutputUnitStart error");
-            if(!error){
-                self.isRunning = YES;
-            }else{
-                [self unInitalizeAudioUnit];
-            }
+        [self audioOutputUnitSatrt];
+        bool error = CheckError(AudioOutputUnitStart(audioUnit), "Player AudioOutputUnitStart");
+        if(!error){
+            self.isRunning = YES;
         }
     }
 }
 
 
--(void)initalizeAudioUnit{
-    if(!initalizeAudioUnitSuccess){
-        ///初始化的时候会请求音频焦点的
-        initalizeAudioUnitSuccess =  !CheckError(AudioUnitInitialize(audioUnit),"Player AudioUnitInitialize error");
+-(void)audioOutputUnitSatrt{
+    if(!hasInitAudioUnit){
+        if(AudioUnitInitialize(audioUnit) == noErr){
+            hasInitAudioUnit = YES;
+        }else{
+            hasInitAudioUnit = NO;
+        }
     }
 }
 
--(void)unInitalizeAudioUnit{
-    if(initalizeAudioUnitSuccess){
-        CheckError(AudioUnitUninitialize(audioUnit),"Player AudioUnitUninitialize");
-        initalizeAudioUnitSuccess = NO;
-    }
+-(void)audioUnitUninitialize{
+    AudioUnitUninitialize(audioUnit);
+    hasInitAudioUnit = NO;
 }
 
 
 
 -(void)pause{
     if(self.isRunning){
-        CheckError(AudioOutputUnitStop(audioUnit), "Player AudioOutputUnitStop error");
+        AudioOutputUnitStop(audioUnit);
+        [self audioUnitUninitialize];
         self.isRunning = NO;
         [self clear];
     }
@@ -83,7 +80,6 @@
 - (void)stop{
     if(audioUnit != nil){
         [self pause];
-        [self unInitalizeAudioUnit];
         AudioComponentInstanceDispose(self->audioUnit);
         self->audioUnit = nil;
     }
@@ -125,7 +121,7 @@
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
     
     // 打开AudioUnit
-    CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"Audio Component Instance New Failed");
+    CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"AudioComponentInstanceNew");
     
     
     
@@ -148,7 +144,7 @@
                                     0,
                                     &audioFormat,
                                     sizeof(audioFormat)),
-               "kAudioUnitProperty_StreamFormat of bus 0 failed");
+               "SetOutputStreamFormat");
     
     //音频播放回调
     AURenderCallbackStruct playCallback;
@@ -160,7 +156,20 @@
                                     0,
                                     &playCallback,
                                     sizeof(playCallback)),
-               "kAudioUnitProperty_SetRenderCallback failed");
+               "SetOutputCallback");
+    
+    [self setupBufferDuration:0.1];
+}
+
+-(BOOL)setupBufferDuration:(NSTimeInterval)duration{
+    
+    UInt32 preferredBufferSize = (( duration * sampleRate) ); // in bytes
+    int size = sizeof (preferredBufferSize);
+
+    ///设置buffsize的时候，IOS和MAC系统不一样
+    BOOL error = CheckError(AudioUnitSetProperty (audioUnit, kAudioDevicePropertyBufferFrameSize, kAudioUnitScope_Output, 1, &preferredBufferSize, size),"kAudioDevicePropertyBufferFrameSize error");
+    
+    return !error;
 }
 
 
@@ -214,6 +223,7 @@ OSStatus _playCallback(
     
     PCMPlayer *player = (__bridge PCMPlayer*)inRefCon;
     @synchronized (player->mSamples) {
+        player.isRunning = YES;
         NSUInteger bytesToCopy = MIN(ioData->mBuffers[0].mDataByteSize, [player->mSamples length]);
         //NSLog(@"获取长度 %u",(unsigned int)ioData->mBuffers[0].mDataByteSize);
         if(bytesToCopy>0){

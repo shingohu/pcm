@@ -14,12 +14,6 @@
 #define kChannels   (1)//声道数
 #define kBits       (16)//位数
 
-#define kOutputBus 0
-#define kInputBus 1
-#define SampleRate 8000
-#define numberOfChannel 1  // 1 is mono: 2 is stereo
-
-
 @implementation PCMRecorder
 {
     AudioUnit audioUnit;
@@ -50,7 +44,7 @@
 
 -(BOOL)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
     if(audioUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
-        [self stop];
+        [self dispose];
     }
     self->sampleRate = sampleRate;
     self->enableAEC = enableAEC;
@@ -67,35 +61,49 @@
 
 
 - (BOOL)start{
-    if(!self.isRunning){
-        BOOL error = NO;
-        error = CheckError(AudioUnitInitialize(audioUnit),"Recorder AudioUnitInitialize error");
-        if(error){
-            return  NO;
+    if(!self.isRunning && audioUnit != nil){
+        NSInteger start1 = [self getNowDateFormatInteger];
+        AudioUnitInitialize(audioUnit);
+        NSInteger start2 = [self getNowDateFormatInteger];
+        BOOL error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart");
+        NSInteger start3 = [self getNowDateFormatInteger];
+        //printf("录音开始1耗时%ld\n", (long)(start2 - start1));
+        //printf("录音开始2耗时%ld\n", (long)(start3 - start2));
+        if(!error){
+            self.isRunning = YES;
+        }else{
+            return NO;
         }
-        error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart error");
-        if(error){
-            [self stop];
-            return  NO;
-        }
-        self.isRunning = YES;
     }
-    return YES;
+    return  self.isRunning;
 }
+
+
+///不销毁
 - (void)stop{
-    if(audioUnit != nil){
-        if(self.isRunning){
-            AudioOutputUnitStop(audioUnit);
-            AudioUnitUninitialize(audioUnit);
-        }
-        AudioComponentInstanceDispose(audioUnit);
-        audioUnit = nil;
-    }
-    if(self.isRunning){
+    if(self.isRunning && audioUnit != nil){
+        //NSInteger start = [self getNowDateFormatInteger];
+        AudioOutputUnitStop(audioUnit);
+        //NSInteger start1 = [self getNowDateFormatInteger];
+        AudioUnitUninitialize(audioUnit);
+        //NSInteger start2 = [self getNowDateFormatInteger];
+        //NSInteger start3 = [self getNowDateFormatInteger];
+        //printf("停止1耗时%ld\n", (long)(start1 - start));
+        //printf("停止2耗时%ld\n", (long)(start2 - start1));
+        //printf("停止3耗时%ld\n", (long)(start3 - start2));
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
 }
+
+-(void)dispose{
+    if(audioUnit != nil){
+        [self stop];
+        AudioComponentInstanceDispose(self->audioUnit);
+        self->audioUnit = nil;
+    }
+}
+
 
 
 
@@ -132,7 +140,7 @@
     if(inputComponent != NULL){
         //kAudioUnitSubType_VoiceProcessingIO 导致这里耗时
         // Get audio units
-        BOOL error  = CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"AudioComponentInstanceNew Error");
+        BOOL error  = CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"AudioComponentInstanceNew");
         if(error){
             return NO;
         }
@@ -156,7 +164,7 @@
                          kAudioUnitScope_Input,
                          1, // input element
                          &enableIO,
-                         sizeof(enableIO)),"kAudioUnitScope_Input error");
+                         sizeof(enableIO)),"kAudioUnitScope_Input");
     
     if(error){
         return NO;
@@ -168,7 +176,7 @@
                          kAudioUnitScope_Output,
                          0,   //output element
                          &enableIO,
-                         sizeof(enableIO)),"kAudioUnitScope_Output error");
+                         sizeof(enableIO)),"kAudioUnitScope_Output");
     if(error){
         return NO;
     }
@@ -190,11 +198,11 @@
     addr.mScope = kAudioObjectPropertyScopeGlobal;
     addr.mElement = kAudioObjectPropertyElementMaster;
 
-    BOOL error = CheckError(AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, NULL, &size, &deviceID),"kAudioObjectSystemObject error");
+    BOOL error = CheckError(AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr, 0, NULL, &size, &deviceID),"kAudioObjectSystemObject");
     
     
     if (!error) {
-        error = CheckError(AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &deviceID, size),"kAudioOutputUnitProperty_CurrentDevice error");
+        error = CheckError(AudioUnitSetProperty(audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &deviceID, size),"kAudioOutputUnitProperty_CurrentDevice");
     }
     
     
@@ -381,7 +389,7 @@ OSStatus _inputCallback(void *inRefCon,
     AudioBufferList bufferList;
     bufferList.mNumberBuffers = 1;
     bufferList.mBuffers[0].mData = NULL;
-    bufferList.mBuffers[0].mDataByteSize = inNumberFrames*2;
+    bufferList.mBuffers[0].mDataByteSize = 0;
 
     
     OSStatus status = AudioUnitRender(audioRecorder->audioUnit,
@@ -391,6 +399,7 @@ OSStatus _inputCallback(void *inRefCon,
                     inNumberFrames,
                     &bufferList);
     if(status == noErr){
+        audioRecorder.isRunning = YES;
         //将采集到的声音，进行回调
         if (audioRecorder.audioCallBack)
         {

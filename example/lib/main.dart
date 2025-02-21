@@ -22,8 +22,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    recorder.init(sampleRate: 8000);
-    recorder.uint8ListStream.listen(onAudio);
+    //recorder.init(sampleRate: 8000);
+    //recorder.uint8ListStream.listen(onAudio);
     super.initState();
   }
 
@@ -61,7 +61,7 @@ class _MyAppState extends State<MyApp> {
                                   list.clear();
                                 }
                               } else {
-                                player.play();
+                                player.stop();
                               }
                             });
                       },
@@ -69,8 +69,9 @@ class _MyAppState extends State<MyApp> {
                   TextButton(
                       onPressed: () {
                         PCMRecorder.stop();
-                        recorder.stop();
-                        recorder.stopStreamingData();
+                        //recorder.stop();
+                        //recorder.stopStreamingData();
+                        //player.stop();
                       },
                       child: Text('结束录音')),
                 ],

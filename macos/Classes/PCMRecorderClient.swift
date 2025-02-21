@@ -13,6 +13,7 @@ class PCMRecorderClient {
     
     
     
+    
     static let shared = PCMRecorderClient()
     
     
@@ -26,7 +27,6 @@ class PCMRecorderClient {
     private var PRE_FRAME_SIZE:Int = 160
     private var samplateRate:Int = 8000
     private var enableAEC:Bool = true
-    public var isRecording = false
     
     ///音频缓冲
     private var audioBuffer:Data = Data.init();
@@ -55,30 +55,28 @@ class PCMRecorderClient {
     
     ///开始录制
     func start()->Bool {
-        if(!isRecording){
-            isRecording =  PCMRecorder.shared().start()
-        }
-        return isRecording
+        return PCMRecorder.shared().start()
     }
     
-    ///停止录制
+    ///停止录制(不销毁)
     func stop() {
         if(isRecording){
             PCMRecorder.shared().stop()
-            isRecording = false
-            resetWhenStop()
         }
     }
     
+    ///销毁
+    func dispose(){
+        PCMRecorder.shared().dispose()
+    }
     
-    
-    
-    
-    
+ 
     private func recordAudioCallBack(_ audioData: Data?)->Void {
         if(audioData != nil && isRecording){
             audioBuffer.append(audioData!)
             readNextPCMData()
+        }else if(audioData == nil){
+            resetWhenStop()
         }
     }
         
@@ -100,12 +98,22 @@ class PCMRecorderClient {
         }
     }
     
-   
+    
+    ///是否正在录制
+    var isRecording: Bool {
+        get {
+            PCMRecorder.shared().isRunning
+        }
+    }
+    
+    
+    
+    
     private func resetWhenStop(){
+        readNextPCMData()
         ///结束录制
         self.readPCMDataIndex = 0
         self.audioBuffer.removeAll()
-        self.isRecording = false
         if(self.onAudioCallback != nil){
             self.onAudioCallback!(nil)
         }

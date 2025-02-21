@@ -16,10 +16,10 @@
 
 @implementation PCMRecorder
 {
-    AudioUnit _remoteIOUnit;
-    AudioStreamBasicDescription _streamFormat;
+    AudioUnit audioUnit;
     double sampleRate;
     bool enableAEC;
+    BOOL hasInitAudioUnit;
 }
 
 + (instancetype)shared{
@@ -43,63 +43,78 @@
 
 
 -(BOOL)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
-    if(_remoteIOUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
-        [self stop];
+    if(audioUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
+        [self dispose];
     }
     self->sampleRate = sampleRate;
     self->enableAEC = enableAEC;
-    if(_remoteIOUnit == nil){
-        return [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
-    }
+    BOOL success =  [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
+       if(!success){
+           if(audioUnit != nil){
+               AudioComponentInstanceDispose(audioUnit);
+               audioUnit = nil;
+           }
+       }
     return YES;
 }
 
 
 
 - (BOOL)start{
-    if(!self.isRunning){
-        
-        [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:0.01 error:nil];
-        
-        BOOL error = NO;
-            //启用录音功能(提前设置这个会导致请求录音权限)
-        UInt32 inputEnableFlag = 1;
-        error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                            kAudioOutputUnitProperty_EnableIO,
-                                            kAudioUnitScope_Input,
-                                            1,
-                                            &inputEnableFlag,
-                                            sizeof(inputEnableFlag)),
-                       "Open input of bus 1 failed");
-        if(error){
-            return  NO;
+    if(!self.isRunning && audioUnit != nil){
+        NSInteger start1 = [self getNowDateFormatInteger];
+        [self audioUnitInitialize];
+        NSInteger start2 = [self getNowDateFormatInteger];
+        BOOL error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart");
+        NSInteger start3 = [self getNowDateFormatInteger];
+        //printf("录音开始1耗时%ld\n", (long)(start2 - start1));
+        //printf("录音开始2耗时%ld\n", (long)(start3 - start2));
+        if(!error){
+            self.isRunning = YES;
+        }else{
+            return NO;
         }
-        error = CheckError(AudioUnitInitialize(_remoteIOUnit),"Recorder AudioUnitInitialize error");
-        if(error){
-            return  NO;
-        }
-        error = CheckError(AudioOutputUnitStart(_remoteIOUnit),"Recorder AudioOutputUnitStart error");
-        if(error){
-            [self stop];
-            return  NO;
-        }
-        self.isRunning = YES;
     }
-    return YES;
+    return  self.isRunning;
 }
+
+///不销毁
 - (void)stop{
-    if(_remoteIOUnit!= nil){
-        if(self.isRunning){
-            AudioOutputUnitStop(_remoteIOUnit);
-        }
-        AudioUnitUninitialize(_remoteIOUnit);
-        AudioComponentInstanceDispose(self->_remoteIOUnit);
-        self->_remoteIOUnit = nil;
-    }
-    if(self.isRunning){
+    if(self.isRunning && audioUnit != nil){
+        //NSInteger start = [self getNowDateFormatInteger];
+        AudioOutputUnitStop(audioUnit);
+        //NSInteger start1 = [self getNowDateFormatInteger];
+        [self audioUnitUninitialize];
+        //NSInteger start2 = [self getNowDateFormatInteger];
+        //NSInteger start3 = [self getNowDateFormatInteger];
+        //printf("停止1耗时%ld\n", (long)(start1 - start));
+        //printf("停止2耗时%ld\n", (long)(start2 - start1));
+        //printf("停止3耗时%ld\n", (long)(start3 - start2));
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
+}
+
+-(void)dispose{
+    if(audioUnit != nil){
+        [self stop];
+        AudioComponentInstanceDispose(self->audioUnit);
+        self->audioUnit = nil;
+    }
+}
+
+
+-(void)audioUnitInitialize{
+    if(!hasInitAudioUnit){
+        [self setupEnableInput];
+        ///初始化的时候会请求音频焦点的
+        hasInitAudioUnit =  !CheckError(AudioUnitInitialize(audioUnit),"Recorder AudioUnitInitialize");
+    }
+}
+
+-(void)audioUnitUninitialize{
+        AudioUnitUninitialize(audioUnit);
+        hasInitAudioUnit = NO;
 }
 
 
@@ -120,83 +135,154 @@
 
 
 - (BOOL)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
-    
-    BOOL error = NO;
-    
-    AudioComponentDescription inputcd = {0};
-    inputcd.componentType = kAudioUnitType_Output;
-    if(enableAEC){
-        inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
-    }else{
-        inputcd.componentSubType = kAudioUnitSubType_RemoteIO;
+    if(audioUnit != nil){
+        return YES;
     }
-    inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
-    inputcd.componentFlagsMask = 0;
-    inputcd.componentFlags = 0;
+    if(![self setupAudioUnit:enableAEC]){
+        return NO;
+    }
+    
+    if(![self setupDisableOutput]){
+        return NO;
+    }
+    
+    if(![self setupStreamFormat:sampleRate]){
+        return NO;
+    }
+    if(![self setupInputCallback]){
+        return NO;
+    }
+    NSTimeInterval interval = sampleRate/(1000*8*100);
+    [self setupBufferDuration:interval];
+    return YES;
+}
 
-    
-    AudioComponent inputComponent = AudioComponentFindNext(NULL, &inputcd);
-     
-    // 打开AudioUnit
-    error = CheckError(AudioComponentInstanceNew(inputComponent, &_remoteIOUnit),"AudioComponentInstanceNew  failed");
-    if(error){
-        return NO;
+
+-(BOOL)setupBufferDuration:(NSTimeInterval)duration{
+    [[AVAudioSession sharedInstance] setPreferredIOBufferDuration:duration error:nil];
+    return YES;
+}
+
+
+
+
+-(BOOL)setupAudioUnit:(BOOL)enableAEC{
+    // Describe audio component
+    AudioComponentDescription desc;
+    desc.componentType = kAudioUnitType_Output;
+    if(enableAEC){
+        desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    }else{
+        desc.componentSubType = kAudioUnitSubType_RemoteIO;
     }
-    
-    
-    AudioStreamBasicDescription audioFormat;
-    
-     //Set up stream format for input and output
-    audioFormat.mFormatID = kAudioFormatLinearPCM;
-    audioFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-    audioFormat.mSampleRate = sampleRate;
-    audioFormat.mFramesPerPacket = 1;
-    audioFormat.mBytesPerFrame = 2;
-    audioFormat.mBytesPerPacket = 2;
-    audioFormat.mBitsPerChannel = kBits;
-    audioFormat.mChannelsPerFrame = kChannels;
-     
-    
-    error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                     kAudioUnitProperty_StreamFormat,
-                                     kAudioUnitScope_Output,
-                                     1,
-                                     &audioFormat,
-                                     sizeof(audioFormat)),
-                "kAudioUnitProperty_StreamFormat of bus 1 failed");
-    
-    
-    if(error){
-        return NO;
+    desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+    desc.componentFlags = 0;
+    desc.componentFlagsMask = 0;
+    // Get component
+    AudioComponent inputComponent = AudioComponentFindNext(NULL, &desc);
+    if(inputComponent != NULL){
+        // Get audio units
+        BOOL error  = CheckError(AudioComponentInstanceNew(inputComponent, &audioUnit),"AudioComponentInstanceNew");
+        if(error){
+            return NO;
+        }
     }
+    return YES;
+}
+
+
+///启用输入(注意这个会请求mic权限)
+-(BOOL)setupEnableInput{
     
-    
-    //    Open output of bus 0(output speaker)
-        //禁用播放功能
-        UInt32 outputEnableFlag = 0;
-        CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                        kAudioOutputUnitProperty_EnableIO,
-                                        kAudioUnitScope_Output,
-                                        0,
-                                        &outputEnableFlag,
-                                        sizeof(outputEnableFlag)),
-                   "Open output of bus 0 failed");
-    //音频采集结果回调
-    AURenderCallbackStruct recordCallback;
-    recordCallback.inputProc = _recordCallback;
-    recordCallback.inputProcRefCon = (__bridge void *)(self);
-    error = CheckError(AudioUnitSetProperty(_remoteIOUnit,
-                                kAudioOutputUnitProperty_SetInputCallback,
-                                    kAudioUnitScope_Global,
-                                    1,
-                                    &recordCallback,
-                                    sizeof(recordCallback)),
-               "couldnt set remote i/o render callback for output");
+    UInt32 enableIO = 1;
+    BOOL error = NO;
+    error = CheckError(AudioUnitSetProperty(audioUnit,
+                         kAudioOutputUnitProperty_EnableIO,
+                         kAudioUnitScope_Input,
+                         1,   //output element
+                         &enableIO,
+                         sizeof(enableIO)),"enable input");
     if(error){
         return NO;
     }
     return YES;
 }
+
+
+
+
+///禁用播放
+-(BOOL)setupDisableOutput{
+    
+    UInt32 enableIO = 0;
+    BOOL error = NO;
+    error = CheckError(AudioUnitSetProperty(audioUnit,
+                         kAudioOutputUnitProperty_EnableIO,
+                         kAudioUnitScope_Output,
+                         0,   //output element
+                         &enableIO,
+                         sizeof(enableIO)),"disable output");
+    if(error){
+        return NO;
+    }
+    return YES;
+}
+
+
+///设置格式
+-(BOOL)setupStreamFormat:(double)sampleRate{
+    
+    // Describe format
+    AudioStreamBasicDescription audioFormat = {0};
+
+    audioFormat.mSampleRate = sampleRate;
+    audioFormat.mFormatID = kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked ;
+    audioFormat.mChannelsPerFrame = 1;
+    audioFormat.mFramesPerPacket = 1;
+    audioFormat.mBitsPerChannel = 16;
+    audioFormat.mBytesPerPacket = 2;
+    audioFormat.mBytesPerFrame = 2;
+    audioFormat.mReserved = 0;
+    
+    // Apply format
+    BOOL error = CheckError(AudioUnitSetProperty(audioUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  1,
+                                  &audioFormat,
+                                  sizeof(audioFormat)),"SetInputStreamFormat");
+    if(error){
+        return NO;
+    }
+    
+    return YES;
+    
+    
+    
+}
+
+
+
+///设置回调
+-(BOOL)setupInputCallback{
+    // Set input callback
+    AURenderCallbackStruct callbackStruct;
+    callbackStruct.inputProc = _inputCallback;
+    callbackStruct.inputProcRefCon = (__bridge void *)(self);
+    BOOL error = CheckError(AudioUnitSetProperty(audioUnit,
+                                  kAudioOutputUnitProperty_SetInputCallback,
+                                  kAudioUnitScope_Global,
+                                  1,
+                                  &callbackStruct,
+                                  sizeof(callbackStruct)),"SetInputCallback");
+    if(error){
+        return NO;
+    }
+    return YES;
+}
+
+
 
 
 static bool CheckError(OSStatus error, const char *operation)
@@ -217,7 +303,7 @@ static bool CheckError(OSStatus error, const char *operation)
 }
 
 
-OSStatus _recordCallback(void *inRefCon,
+OSStatus _inputCallback(void *inRefCon,
                           AudioUnitRenderActionFlags *ioActionFlags,
                           const AudioTimeStamp *inTimeStamp,
                           UInt32 inBusNumber,
@@ -229,20 +315,20 @@ OSStatus _recordCallback(void *inRefCon,
     bufferList.mNumberBuffers = 1;
     bufferList.mBuffers[0].mData = NULL;
     bufferList.mBuffers[0].mDataByteSize = 0;
-    
-    OSStatus status = AudioUnitRender(audioRecorder->_remoteIOUnit,
+    OSStatus status = AudioUnitRender(audioRecorder->audioUnit,
                     ioActionFlags,
                     inTimeStamp,
                     1,
                     inNumberFrames,
                     &bufferList);
     if(status == noErr){
+        //NSLog(@"获取长度 %u",(unsigned int)(inNumberFrames*2));
+        audioRecorder.isRunning  = YES;
         //将采集到的声音，进行回调
         if (audioRecorder.audioCallBack)
         {
             AudioBuffer buffer = bufferList.mBuffers[0];
             NSData *pcmBlock =[NSData dataWithBytes:buffer.mData length:buffer.mDataByteSize];
-            //NSLog(@"获取长度 %lu",(unsigned long)pcmBlock.length);
             audioRecorder.audioCallBack(pcmBlock);
         }
     }

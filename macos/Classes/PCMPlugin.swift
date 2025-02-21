@@ -35,7 +35,17 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let method = call.method
-        if(method == "startRecording"){
+        if(method == "setUpRecorder"){
+            let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+            var enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
+            var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
+            result(success)
+        }else if(method == "releaseRecorder"){
+            PCMRecorderClient.shared.dispose()
+            result(true)
+        }
+        else if(method == "startRecording"){
             haseRecordPermission { allow in
                 if(allow){
                     let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
