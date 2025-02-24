@@ -27,7 +27,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL)start;
 - (void)stop;
-- (void)dispose;
 
 
 @end

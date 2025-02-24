@@ -94,43 +94,6 @@ class _InnerPCMRecorder {
     return success;
   }
 
-  /**
-   * 初始化录音器
-   * [sampleRateInHz] 录音采样率
-   * [preFrameSize]每次获取回调数据大小
-   * [echoCancel]是否开启回音消除(设备支持的情况下),开启后录音可能会被影响
-   * Android上开启回声消除使用VOICE_COMMUNICATION录音
-   * iOS开启后会导致启动MIC变慢,并且音量变小,销毁也会耗时,并且Options也会变更,会导致移除配置的BluetoothA2dp,mode也会变成VoiceChat
-   * [autoGain]是否开启自动增益(设备支持的情况下),only android,开启后录音音量可能会被影响
-   * [noiseSuppress]是否开启降噪(设备支持的情况下)，only android,开启后录音音量可能会被影响
-   */
-  Future<bool> setUp({
-    int sampleRateInHz = 8000,
-    int preFrameSize = 320,
-    bool echoCancel = false,
-    bool autoGain = false,
-    bool noiseSuppress = false,
-  }) async {
-    if (!_supportPlatform()) {
-      print("not support platform");
-      return false;
-    }
-    if (isRecordingNow) {
-      if (await isRecording) {
-        _printLog("正在录音中");
-        return true;
-      }
-    }
-    bool success = await _channel.invokeMethod("setUpRecorder", {
-      "sampleRateInHz": sampleRateInHz,
-      "preFrameSize": preFrameSize,
-      "enableAEC": echoCancel,
-      "autoGain": autoGain,
-      "noiseSuppress": noiseSuppress,
-    });
-    return success;
-  }
-
   void _audioListener(Uint8List? data) {
     _onAudioCallback?.call(data);
     if (data == null) {
@@ -152,22 +115,10 @@ class _InnerPCMRecorder {
     return false;
   }
 
-  ///停止录音(iOS  Mac上不销毁)
+  ///停止录音
   Future<void> stop() async {
     if (_supportPlatform()) {
       await _channel.invokeMethod("stopRecording");
-    }
-    if (_stopCompleter != null) {
-      await _stopCompleter!.future;
-      _stopCompleter = null;
-    }
-    isRecordingNow = false;
-  }
-
-  ///销毁录音器
-  Future<void> dispose() async {
-    if (_supportPlatform()) {
-      await _channel.invokeMethod("releaseRecorder");
     }
     if (_stopCompleter != null) {
       await _stopCompleter!.future;

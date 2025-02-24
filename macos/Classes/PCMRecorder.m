@@ -44,7 +44,7 @@
 
 -(BOOL)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
     if(audioUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
-        [self dispose];
+        [self stop];
     }
     self->sampleRate = sampleRate;
     self->enableAEC = enableAEC;
@@ -94,19 +94,11 @@
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
-}
-
--(void)dispose{
     if(audioUnit != nil){
-        [self stop];
         AudioComponentInstanceDispose(self->audioUnit);
         self->audioUnit = nil;
     }
 }
-
-
-
-
 
 - (NSInteger)getNowDateFormatInteger{
     // 创建 NSDate 对象表示当前时间

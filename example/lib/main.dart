@@ -49,19 +49,22 @@ class _MyAppState extends State<MyApp> {
                         // print(DateTime.now().millisecondsSinceEpoch);
                         // recorder.start();
                         List<int> list = [];
+                        player.stop();
                         PCMRecorder.start(
                             echoCancel: false,
                             onData: (data) {
                               //print(DateTime.now().millisecondsSinceEpoch);
                               if (data != null) {
                                 list.addAll(data);
-                                if (list.length >= 16000) {
-                                  player.play();
-                                  player.feed(Uint8List.fromList(list));
-                                  list.clear();
-                                }
+                                // if (list.length >= 16000) {
+                                //   player.play();
+                                //   player.feed(Uint8List.fromList(list));
+                                //   list.clear();
+                                // }
                               } else {
-                                player.stop();
+                                player.play();
+                                player.feed(Uint8List.fromList(list));
+                                list.clear();
                               }
                             });
                       },

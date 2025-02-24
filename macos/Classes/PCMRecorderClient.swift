@@ -58,16 +58,11 @@ class PCMRecorderClient {
         return PCMRecorder.shared().start()
     }
     
-    ///停止录制(不销毁)
+    ///停止录制
     func stop() {
         if(isRecording){
             PCMRecorder.shared().stop()
         }
-    }
-    
-    ///销毁
-    func dispose(){
-        PCMRecorder.shared().dispose()
     }
     
  
