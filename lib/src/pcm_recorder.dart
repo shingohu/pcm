@@ -19,9 +19,27 @@ class _InnerPCMRecorder {
   ///是否打印日志
   bool enableLog = true;
 
+  String _threeDigits(int n) {
+    if (n >= 100) return "${n}";
+    if (n >= 10) return "0${n}";
+    return "00${n}";
+  }
+
+  String _twoDigits(int n) {
+    if (n >= 10) return "${n}";
+    return "0${n}";
+  }
+
   void _printLog(String message) {
     if (enableLog) {
-      print("[PCMRecorder]" + message);
+      DateTime now = DateTime.now();
+      String h = _twoDigits(now.hour);
+      String min = _twoDigits(now.minute);
+      String sec = _twoDigits(now.second);
+      String ms = _threeDigits(now.millisecond);
+
+      String time = "$h:$min:$sec.$ms";
+      print("[PCMRecorder][$time]" + message);
     }
   }
 
