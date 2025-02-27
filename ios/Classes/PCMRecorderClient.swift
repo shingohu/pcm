@@ -44,13 +44,10 @@ class PCMRecorderClient {
     
     
     func setUp(samplateRate:Int,preFrameSize:Int,enableAEC:Bool)->Bool {
-        if(!isRecording){
-            self.PRE_FRAME_SIZE = preFrameSize
-            self.samplateRate = samplateRate
-            self.enableAEC = enableAEC
-            return PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
-        }
-        return true
+        self.PRE_FRAME_SIZE = preFrameSize
+        self.samplateRate = samplateRate
+        self.enableAEC = enableAEC
+        return PCMRecorder.shared().setUp(Double(samplateRate),enableAEC: enableAEC)
     }
     
     ///开始录制
@@ -60,9 +57,7 @@ class PCMRecorderClient {
     
     ///停止录制
     func stop() {
-        if(isRecording){
-            PCMRecorder.shared().stop()
-        }
+        PCMRecorder.shared().stop()
     }
     
 

@@ -10,6 +10,8 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     
     var players = [String: PCMPlayerClient]()
     
+    let recordOpQueue = DispatchQueue(label: "com.lianke.pcm.recordop",qos: .userInteractive)
+    
     
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -39,52 +41,58 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let method = call.method
         if(method == "startRecording"){
-            haseRecordPermission { allow in
-                if(allow){
-                    let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-                    let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    var enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
-                    let session = AVAudioSession.sharedInstance()
-                    if(session.category != .playAndRecord && session.category != .record){
-                        do {
-                            print("开始录音时没有设置录音模式,重新设置")
-                            try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
-                        }catch {
-                            print(error)
-                            print("设置音频录音和播放模式失败")
-                            result(false)
-                            return
-                        }
-                    }
-                    if(enableAEC && session.category == .record){
-                        enableAEC = false
-                    }
-                    
-                    if(!PCMRecorderClient.shared.isRecording){
-                        do {
-                            if(self.isSimulator){
-                                //模拟器必须要先激活,否则会导致录音失败
-                                try session.setActive(true)
+            recordOpQueue.async {
+                self.haseRecordPermission { allow in
+                    if(allow){
+                        let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+                        let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+                        var enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
+                        let session = AVAudioSession.sharedInstance()
+                        if(session.category != .playAndRecord && session.category != .record){
+                            do {
+                                print("开始录音时没有设置录音模式,重新设置")
+                                try session.setCategory(.playAndRecord, options: [.allowBluetooth,.allowBluetoothA2DP,.defaultToSpeaker,.mixWithOthers])
+                            }catch {
+                                print(error)
+                                print("设置音频录音和播放模式失败")
+                                result(false)
+                                return
                             }
-                        }catch {
-                            print("获取焦点失败")
                         }
+                        if(enableAEC && session.category == .record){
+                            enableAEC = false
+                        }
+                        
+                        if(!PCMRecorderClient.shared.isRecording){
+                            do {
+                                if(self.isSimulator){
+                                    //模拟器必须要先激活,否则会导致录音失败
+                                    try session.setActive(true)
+                                }
+                            }catch {
+                                print("获取焦点失败")
+                            }
+                        }
+                        var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
+                        if(success){
+                            success =  PCMRecorderClient.shared.start()
+                        }
+                        result(success)
+                    }else{
+                        print("没有录音权限")
+                        result(false)
                     }
-                    var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
-                    if(success){
-                        success =  PCMRecorderClient.shared.start()
-                    }
-                    result(success)
-                }else{
-                    print("没有录音权限")
-                    result(false)
                 }
             }
         }else if(method == "stopRecording"){
-            PCMRecorderClient.shared.stop()
-            result(true)
+            recordOpQueue.async {
+                PCMRecorderClient.shared.stop()
+                result(true)
+            }
         }else if(method == "isRecording"){
-            result(PCMRecorderClient.shared.isRecording)
+            recordOpQueue.async {
+                result(PCMRecorderClient.shared.isRecording)
+            }
         }else if(method == "requestRecordPermission"){
             requestRecordPermission(result: result)
         }else if(method == "checkRecordPermission"){

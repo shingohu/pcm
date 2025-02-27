@@ -9,7 +9,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     private var pcmStreamSink: FlutterEventSink?
     
     var players = [String: PCMPlayerClient]()
-    
+    let recordOpQueue = DispatchQueue(label: "com.lianke.pcm.recordop",qos: .userInteractive)
     
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -36,26 +36,32 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let method = call.method
         if(method == "startRecording"){
-            haseRecordPermission { allow in
-                if(allow){
-                    let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
-                    let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
-                    let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
-                    var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
-                    if(success){
-                        success =  PCMRecorderClient.shared.start()
+            recordOpQueue.async {
+                self.haseRecordPermission { allow in
+                    if(allow){
+                        let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+                        let preFrameSize = (call.arguments as! Dictionary<String, Any>)["preFrameSize"]  as! Int
+                        let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
+                        var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
+                        if(success){
+                            success =  PCMRecorderClient.shared.start()
+                        }
+                        result(success)
+                    }else{
+                        print("没有录音权限")
+                        result(false)
                     }
-                    result(success)
-                }else{
-                    print("没有录音权限")
-                    result(false)
                 }
             }
         }else if(method == "stopRecording"){
-            PCMRecorderClient.shared.stop()
-            result(true)
+            recordOpQueue.async {
+                PCMRecorderClient.shared.stop()
+                result(true)
+            }
         }else if(method == "isRecording"){
-            result(PCMRecorderClient.shared.isRecording)
+            recordOpQueue.async {
+                result(PCMRecorderClient.shared.isRecording)
+            }
         }else if(method == "requestRecordPermission"){
             requestRecordPermission(result: result)
         }else if(method == "checkRecordPermission"){

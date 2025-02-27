@@ -49,12 +49,12 @@
     self->sampleRate = sampleRate;
     self->enableAEC = enableAEC;
     BOOL success =  [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
-       if(!success){
-           if(audioUnit != nil){
-               AudioComponentInstanceDispose(audioUnit);
-               audioUnit = nil;
-           }
-       }
+    if(!success){
+        if(audioUnit != nil){
+            AudioComponentInstanceDispose(audioUnit);
+            audioUnit = nil;
+        }
+    }
     return YES;
 }
 
@@ -62,11 +62,11 @@
 
 - (BOOL)start{
     if(!self.isRunning && audioUnit != nil){
-        NSInteger start1 = [self getNowDateFormatInteger];
+        //NSInteger start1 = [self getNowDateFormatInteger];
         [self audioUnitInitialize];
-        NSInteger start2 = [self getNowDateFormatInteger];
+        //NSInteger start2 = [self getNowDateFormatInteger];
         BOOL error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart");
-        NSInteger start3 = [self getNowDateFormatInteger];
+        //NSInteger start3 = [self getNowDateFormatInteger];
         //printf("录音开始1耗时%ld\n", (long)(start2 - start1));
         //printf("录音开始2耗时%ld\n", (long)(start3 - start2));
         if(!error){
@@ -81,20 +81,16 @@
 ///不销毁
 - (void)stop{
     if(self.isRunning && audioUnit != nil){
-        //NSInteger start = [self getNowDateFormatInteger];
         AudioOutputUnitStop(audioUnit);
-        //NSInteger start1 = [self getNowDateFormatInteger];
         [self audioUnitUninitialize];
-        //NSInteger start2 = [self getNowDateFormatInteger];
-        //NSInteger start3 = [self getNowDateFormatInteger];
-        //printf("停止1耗时%ld\n", (long)(start1 - start));
-        //printf("停止2耗时%ld\n", (long)(start2 - start1));
-        //printf("停止3耗时%ld\n", (long)(start3 - start2));
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
     if(audioUnit != nil){
+        //NSInteger start = [self getNowDateFormatInteger];
         AudioComponentInstanceDispose(self->audioUnit);
+        //NSInteger start2 = [self getNowDateFormatInteger];
+        //printf("销毁耗时%ld\n", (long)(start2 - start));
         self->audioUnit = nil;
     }
 }
@@ -136,11 +132,9 @@
     if(![self setupAudioUnit:enableAEC]){
         return NO;
     }
-    
     if(![self setupDisableOutput]){
         return NO;
     }
-    
     if(![self setupStreamFormat:sampleRate]){
         return NO;
     }
