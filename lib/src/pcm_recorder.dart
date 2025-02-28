@@ -16,6 +16,9 @@ class _InnerPCMRecorder {
   bool isRecordingNow = false;
   Completer? _stopCompleter;
 
+  Stopwatch _startWatch = Stopwatch();
+  Stopwatch _stopWatch = Stopwatch();
+
   ///是否打印日志
   bool enableLog = true;
 
@@ -69,13 +72,12 @@ class _InnerPCMRecorder {
    * [noiseSuppress]是否开启降噪(设备支持的情况下)，only android,开启后录音音量可能会被影响
    * [onData] 音频数据回调
    */
-  Future<bool> start(
-      {int sampleRateInHz = 8000,
-      int preFrameSize = 320,
-      bool echoCancel = false,
-      bool autoGain = false,
-      bool noiseSuppress = false,
-      Function(Uint8List?)? onData}) async {
+  Future<bool> start({int sampleRateInHz = 8000,
+    int preFrameSize = 320,
+    bool echoCancel = false,
+    bool autoGain = false,
+    bool noiseSuppress = false,
+    Function(Uint8List?)? onData}) async {
     if (isRecordingNow) {
       if (await isRecording) {
         _printLog("正在录音中");
@@ -85,7 +87,8 @@ class _InnerPCMRecorder {
     this._onAudioCallback = onData;
     bool success = false;
     if (_supportPlatform()) {
-      _printLog("开始录音");
+      _startWatch.reset();
+      _startWatch.start();
       success = await _channel.invokeMethod("startRecording", {
         "sampleRateInHz": sampleRateInHz,
         "preFrameSize": preFrameSize,
@@ -99,11 +102,13 @@ class _InnerPCMRecorder {
     }
 
     if (!success) {
-      _printLog("开始录音失败");
+      _printLog("录音失败");
       this.isRecordingNow = false;
       _stopCompleter = null;
       return false;
     } else {
+      _startWatch.stop();
+      _printLog("开始录音:${_startWatch.elapsedMilliseconds}ms");
       this.isRecordingNow = true;
       if (_stopCompleter == null) {
         _stopCompleter = Completer();
@@ -117,7 +122,8 @@ class _InnerPCMRecorder {
     if (data == null) {
       isRecordingNow = false;
       if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
-        _printLog("结束录音");
+        _stopWatch.stop();
+        _printLog("结束录音:${_stopWatch.elapsedMilliseconds}ms");
         _stopCompleter?.complete();
       }
     } else {
@@ -136,6 +142,8 @@ class _InnerPCMRecorder {
   ///停止录音
   Future<void> stop() async {
     if (_supportPlatform()) {
+      _stopWatch.reset();
+      _stopWatch.start();
       await _channel.invokeMethod("stopRecording");
     }
     if (_stopCompleter != null) {

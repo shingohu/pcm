@@ -43,10 +43,13 @@ class PCMPlayer {
 
   bool _playingFail = false;
 
-  PCMPlayer(
-      {String? playerId,
-      int sampleRateInHz = 8000,
-      AudioStreamType streamType = AudioStreamType.music})
+  Stopwatch _stopwatch = Stopwatch();
+  Stopwatch _startwatch = Stopwatch();
+
+
+  PCMPlayer({String? playerId,
+    int sampleRateInHz = 8000,
+    AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
     setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
   }
@@ -121,14 +124,17 @@ class PCMPlayer {
       }
     }
 
+    _startwatch.reset();
+    _startwatch.start();
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-          "playerId": playerId,
-        }) ??
+      "playerId": playerId,
+    }) ??
         false;
     if (_isPlayingNow) {
       _playingFail = false;
-      _printLog("开始播放");
+      _startwatch.stop();
+      _printLog("开始播放:${_startwatch.elapsedMilliseconds}ms");
     } else {
       if (!_playingFail) {
         _playingFail = true;
@@ -173,14 +179,19 @@ class PCMPlayer {
       _printLog("播放器未初始化");
       return;
     }
-    if (_isPlayingNow) {
-      _printLog("结束播放");
-    }
+
+    bool printStop = _isPlayingNow;
+    _stopwatch.reset();
+    _stopwatch.start();
     _isPlayingNow = false;
     _playingFail = false;
     await _channel.invokeMethod("pausePlaying", {
       "playerId": playerId,
     });
+    if (printStop) {
+      _stopwatch.stop();
+      _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
+    }
   }
 
   ///结束播放(销毁播放器)
