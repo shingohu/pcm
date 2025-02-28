@@ -71,7 +71,6 @@
 -(void)pause{
     if(self.isRunning){
         AudioOutputUnitStop(audioUnit);
-        [self audioUnitUninitialize];
         self.isRunning = NO;
     }
     [self clear];
@@ -80,6 +79,7 @@
 - (void)stop{
     if(audioUnit != nil){
         [self pause];
+        [self audioUnitUninitialize];
         AudioComponentInstanceDispose(self->audioUnit);
         self->audioUnit = nil;
     }

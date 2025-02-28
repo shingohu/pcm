@@ -9,6 +9,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
     private var pcmStreamSink: FlutterEventSink?
     
     var players = [String: PCMPlayerClient]()
+    var playOpQueues = [String: DispatchQueue]()
     
     let recordOpQueue = DispatchQueue(label: "com.lianke.pcm.recordop",qos: .userInteractive)
     
@@ -102,8 +103,14 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
                 let player = PCMPlayerClient()
-                player.setUp(samplateRate: sampleRateInHz)
+                let queue = DispatchQueue(label: playerId ,qos: .userInteractive)
                 players[playerId] = player
+                playOpQueues[playerId] = queue
+                queue.async {
+                    player.setUp(samplateRate: sampleRateInHz)
+                    result(true)
+                }
+                return
             }
             result(true)
         }
@@ -118,8 +125,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     result(false)
                     return
                 }
-                players[playerId]?.start()
-                result(players[playerId]!.isPlaying)
+                
+                playOpQueues[playerId]?.async {
+                    self.players[playerId]?.start()
+                    result(self.players[playerId]!.isPlaying)
+                }
             }
         }
         
@@ -128,9 +138,13 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(players[playerId] == nil){
                 result(false)
             }else{
-                players[playerId]?.stop()
-                players.removeValue(forKey: playerId)
-                result(true)
+                playOpQueues[playerId]?.async {
+                    self.players[playerId]?.stop()
+                    self.players.removeValue(forKey: playerId)
+                    self.playOpQueues.removeValue(forKey: playerId)
+                    result(true)
+                }
+              
             }
         }
         
@@ -139,18 +153,23 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(players[playerId] == nil){
                 result(false)
             }else{
-                players[playerId]?.pause()
-                result(true)
+                playOpQueues[playerId]?.async {
+                    self.players[playerId]?.pause()
+                    result(true)
+                }
             }
-
         }
         
         else if(method == "clearPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] != nil){
-                players[playerId]?.clear()
+            if(players[playerId] == nil){
+                result(true)
+            }else{
+                playOpQueues[playerId]?.async {
+                    self.players[playerId]?.clear()
+                    result(true)
+                }
             }
-            result(true)
         }
         
         else if(method == "isPlaying"){
@@ -158,7 +177,9 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(players[playerId] == nil){
                 result(false)
             }else{
-                result(players[playerId]!.isPlaying)
+                playOpQueues[playerId]?.async {
+                    result(self.players[playerId]!.isPlaying)
+                }
             }
         }
         
@@ -167,17 +188,22 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(players[playerId] == nil){
                 result(0)
             }else{
-                result(players[playerId]!.remainingFrames())
+                playOpQueues[playerId]?.async {
+                    result(self.players[playerId]!.remainingFrames())
+                }
             }
         }
         
         else if(method == "feedPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
-            if(players[playerId] != nil){
-                players[playerId]?.feed(audio: data.data)
+            if(players[playerId] == nil){
+                result(true)
+            }else{
+                playOpQueues[playerId]?.async {
+                    self.players[playerId]?.feed(audio: data.data)
+                }
             }
-            result(true)
         }
         else if(method == "hotRestart"){
             hotRestart()
@@ -197,6 +223,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             value.stop()
         }
         players.removeAll()
+        playOpQueues.removeAll()
     }
     
     

@@ -42,13 +42,13 @@
 
 - (void)start{
     if(!self.isRunning && audioUnit != nil){
-        //NSUInteger start1 = [self getNowDateFormatInteger];
+        NSUInteger start1 = [self getNowDateFormatInteger];
         [self audioUnitInitialize];
-        //NSInteger start2 = [self getNowDateFormatInteger];
+        NSInteger start2 = [self getNowDateFormatInteger];
         bool error = CheckError(AudioOutputUnitStart(audioUnit), "Player AudioOutputUnitStart");
-        //NSInteger start3 = [self getNowDateFormatInteger];
-        //printf("播放开始1耗时%ld\n", (long)(start2 - start1));
-        //printf("播放开始2耗时%ld\n", (long)(start3 - start2));
+        NSInteger start3 = [self getNowDateFormatInteger];
+        printf("播放开始1耗时%ld\n", (long)(start2 - start1));
+        printf("播放开始2耗时%ld\n", (long)(start3 - start2));
         if(!error){
             self.isRunning = YES;
         }
@@ -77,7 +77,7 @@
 -(void)pause{
     if(self.isRunning){
         AudioOutputUnitStop(audioUnit);
-        [self audioUnitUninitialize];
+        //[self audioUnitUninitialize];
         self.isRunning = NO;
     }
     [self clear];
@@ -86,6 +86,7 @@
 - (void)stop{
     if(audioUnit != nil){
         [self pause];
+        [self audioUnitUninitialize];
         AudioComponentInstanceDispose(self->audioUnit);
         self->audioUnit = nil;
     }
