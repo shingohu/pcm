@@ -20,6 +20,8 @@ import androidx.core.content.PermissionChecker;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -48,6 +50,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     private Map<Integer, PermissionCallback> permissionCallbackMap = new HashMap<>();
 
     private Map<String, PCMPlayer> players = new HashMap<>();
+    private Map<String, ExecutorService> playOpServices = new HashMap<>();
+
+    ExecutorService recordOpService = Executors.newSingleThreadExecutor();
+
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -69,21 +75,26 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
                 return;
             }
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            int preFrameSize = call.argument("preFrameSize");
-            boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
-            boolean autoGain = Boolean.TRUE.equals(call.argument("autoGain"));
-            boolean noiseSuppress = Boolean.TRUE.equals(call.argument("noiseSuppress"));
-            boolean success = PCMRecorder.shared().setUp(sampleRateInHz, preFrameSize, enableAEC, autoGain, noiseSuppress);
-            if (success) {
-                success = PCMRecorder.shared().start();
-            }
-            result.success(success);
+            recordOpService.submit(() -> {
+                int sampleRateInHz = call.argument("sampleRateInHz");
+                int preFrameSize = call.argument("preFrameSize");
+                boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
+                boolean autoGain = Boolean.TRUE.equals(call.argument("autoGain"));
+                boolean noiseSuppress = Boolean.TRUE.equals(call.argument("noiseSuppress"));
+                boolean success = PCMRecorder.shared().setUp(sampleRateInHz, preFrameSize, enableAEC, autoGain, noiseSuppress);
+                if (success) {
+                    success = PCMRecorder.shared().start();
+                }
+                result.success(success);
+            });
+
         } else if ("isRecording".equals(method)) {
-            result.success(PCMRecorder.shared().isRecording());
+            recordOpService.submit(() -> result.success(PCMRecorder.shared().isRecording()));
         } else if ("stopRecording".equals(method)) {
-            PCMRecorder.shared().stop();
-            result.success(true);
+            recordOpService.submit(() -> {
+                PCMRecorder.shared().stop();
+                result.success(true);
+            });
         } else if ("setRecordPreferredDevice".equals(method)) {
             int deviceId = call.argument("deviceId");
             PCMRecorder.shared().setPreferredDevice(findInputAudioDevice(deviceId));
@@ -95,67 +106,96 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         }
         ///player
         else if ("setUpPlayer".equals(method)) {
-            int sampleRateInHz = call.argument("sampleRateInHz");
-            int streamType = call.argument("streamType");
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 PCMPlayer player = new PCMPlayer();
-                player.setUp(sampleRateInHz, streamType);
                 players.put(playerId, player);
+                ExecutorService service = Executors.newSingleThreadExecutor();
+                playOpServices.put(playerId, service);
+                service.submit(() -> {
+                    int sampleRateInHz = call.argument("sampleRateInHz");
+                    int streamType = call.argument("streamType");
+                    player.setUp(sampleRateInHz, streamType);
+                    result.success(true);
+                });
+            } else {
+                result.success(true);
             }
-            result.success(true);
+
         } else if ("startPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                players.get(playerId).start();
-                result.success(players.get(playerId).isPlaying());
+                playOpServices.get(playerId).submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        players.get(playerId).start();
+                        result.success(players.get(playerId).isPlaying());
+                    }
+                });
             }
         } else if ("pausePlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                players.get(playerId).pause();
-                result.success(true);
+                playOpServices.get(playerId).submit(() -> {
+                    players.get(playerId).pause();
+                    result.success(true);
+                });
             }
         } else if ("isPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                result.success(players.get(playerId).isPlaying());
+                playOpServices.get(playerId).submit(() -> result.success(players.get(playerId).isPlaying()));
             }
         } else if ("stopPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                players.get(playerId).stop();
-                result.success(true);
-                players.remove(playerId);
+                playOpServices.get(playerId).submit(() -> {
+                    players.get(playerId).stop();
+                    players.remove(playerId);
+                    playOpServices.remove(playerId);
+                    result.success(true);
+                });
             }
         } else if ("clearPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (players.containsKey(playerId)) {
-                players.get(playerId).clear();
+                playOpServices.get(playerId).submit(new Runnable() {
+                    @Override
+                    public void run() {
+                        players.get(playerId).clear();
+                        result.success(true);
+                    }
+                });
+            } else {
+                result.success(true);
             }
-            result.success(true);
+
         } else if ("remainingFrames".equals(method)) {
             String playerId = call.argument("playerId");
             if (!players.containsKey(playerId)) {
                 result.success(0);
             } else {
-                result.success(players.get(playerId).remainingFrames());
+                playOpServices.get(playerId).submit(() -> result.success(players.get(playerId).remainingFrames()));
             }
         } else if ("feedPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (players.containsKey(playerId)) {
-                byte[] data = call.argument("data");
-                players.get(playerId).feed(data);
+                playOpServices.get(playerId).submit(() -> {
+                    byte[] data = call.argument("data");
+                    players.get(playerId).feed(data);
+                    result.success(true);
+                });
+            } else {
+                result.success(true);
             }
-            result.success(true);
         } else if ("hotRestart".equals(method)) {
             hotRestart();
             result.success(true);
@@ -190,6 +230,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             player.stop();
         }
         players.clear();
+        playOpServices.clear();
     }
 
     @Override

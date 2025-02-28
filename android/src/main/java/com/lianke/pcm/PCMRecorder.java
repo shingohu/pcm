@@ -242,7 +242,7 @@ public class PCMRecorder {
                 }
             }
         } else {
-            print("设备不支持AEC");
+            //print("设备不支持AEC");
         }
     }
 
@@ -261,7 +261,7 @@ public class PCMRecorder {
                 }
             }
         } else {
-            print("设备不支持NS");
+           // print("设备不支持NS");
         }
     }
 
@@ -280,7 +280,7 @@ public class PCMRecorder {
                 }
             }
         } else {
-            print("设备不支持AGC");
+            //print("设备不支持AGC");
         }
     }
 

@@ -1,7 +1,5 @@
 PODS:
   - Flutter (1.0.0)
-  - flutter_recorder (0.0.1):
-    - Flutter
   - pcm (0.0.1):
     - Flutter
   - record_darwin (1.0.0):
@@ -9,15 +7,12 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - flutter_recorder (from `.symlinks/plugins/flutter_recorder/ios`)
   - pcm (from `.symlinks/plugins/pcm/ios`)
   - record_darwin (from `.symlinks/plugins/record_darwin/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  flutter_recorder:
-    :path: ".symlinks/plugins/flutter_recorder/ios"
   pcm:
     :path: ".symlinks/plugins/pcm/ios"
   record_darwin:
@@ -25,7 +20,6 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_recorder: 676cb4d0808ce2f36df061ec8fb589b8013f7eac
   pcm: c7f785e74401c051ffc82ae1a7d9c379ab117482
   record_darwin: 3b1a8e7d5c0cbf45ad6165b4d83a6ca643d929c3
 
