@@ -73,8 +73,8 @@
         AudioOutputUnitStop(audioUnit);
         [self audioUnitUninitialize];
         self.isRunning = NO;
-        [self clear];
     }
+    [self clear];
 }
 
 - (void)stop{

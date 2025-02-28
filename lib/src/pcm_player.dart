@@ -41,6 +41,8 @@ class PCMPlayer {
   ///是否打印日志
   bool enableLog = true;
 
+  bool _playingFail = false;
+
   PCMPlayer(
       {String? playerId,
       int sampleRateInHz = 8000,
@@ -89,6 +91,7 @@ class PCMPlayer {
       return;
     }
     _dispose = false;
+    _playingFail = false;
     _sampleRateInHz = sampleRateInHz;
     _printLog("初始化播放器,采样率$sampleRateInHz");
     return _channel.invokeMethod("setUpPlayer", {
@@ -124,9 +127,13 @@ class PCMPlayer {
         }) ??
         false;
     if (_isPlayingNow) {
+      _playingFail = false;
       _printLog("开始播放");
     } else {
-      _printLog("播放失败");
+      if (!_playingFail) {
+        _playingFail = true;
+        _printLog("播放失败");
+      }
     }
   }
 
@@ -170,6 +177,7 @@ class PCMPlayer {
       _printLog("结束播放");
     }
     _isPlayingNow = false;
+    _playingFail = false;
     await _channel.invokeMethod("pausePlaying", {
       "playerId": playerId,
     });
@@ -194,6 +202,7 @@ class PCMPlayer {
     }
     _sampleRateInHz = null;
     _dispose = true;
+    _playingFail = false;
     _isPlayingNow = false;
     await _channel.invokeMethod("stopPlaying", {
       "playerId": playerId,
