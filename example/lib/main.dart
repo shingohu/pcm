@@ -37,7 +37,7 @@ class _MyAppState extends State<MyApp> {
                         List<int> list = [];
                         await PCMRecorder.requestRecordPermission();
                         PCMRecorder.start(
-                            echoCancel: true,
+                            echoCancel: false,
                             onData: (data) {
                               if (data != null) {
                                 list.addAll(data);
@@ -56,6 +56,7 @@ class _MyAppState extends State<MyApp> {
                         player.stop();
                       },
                       child: Text('结束录音')),
+                  TextButton(onPressed: () async {}, child: Text('测试')),
                 ],
               ),
             ),

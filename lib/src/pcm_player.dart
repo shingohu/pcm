@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:uuid/uuid.dart';
 
 export 'dart:typed_data';
@@ -30,21 +31,16 @@ class PCMPlayer {
 
   final String playerId;
 
+  Lock _lock = Lock();
+
   ///是否已经销毁
   bool get isDispose => _dispose;
 
   ///是否已经销毁
   bool _dispose = false;
 
-  ///是否已经初始化
-  bool get _hasSetUp => _sampleRateInHz != null;
-
-  ///初始化采样率
-  int? _sampleRateInHz;
-
-  ///播放失败标记
+  ///播放失败标记(iOS上有可能失败)
   bool _playingFail = false;
-
   Stopwatch _stopwatch = Stopwatch();
   Stopwatch _startwatch = Stopwatch();
 
@@ -62,7 +58,7 @@ class PCMPlayer {
       bool enableAEC = false,
       AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
-    setUp(
+    _setUp(
         sampleRateInHz: sampleRateInHz,
         streamType: streamType,
         enableAEC: enableAEC);
@@ -100,7 +96,7 @@ class PCMPlayer {
   ///[sampleRateInHz]采样率
   ///[streamType] the type of the audio stream [only android]
   ///[enableAEC]iOS是否设置回音消除的subType [only iOS]
-  Future<void> setUp({
+  Future<void> _setUp({
     int sampleRateInHz = 8000,
     AudioStreamType streamType = AudioStreamType.music,
     bool enableAEC = false,
@@ -109,15 +105,14 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    _dispose = false;
-    _playingFail = false;
-    _sampleRateInHz = sampleRateInHz;
-    _printLog("初始化播放器,采样率$sampleRateInHz");
-    return _channel.invokeMethod("setUpPlayer", {
-      "sampleRateInHz": sampleRateInHz,
-      "playerId": playerId,
-      "streamType": streamType.value,
-      "enableAEC": enableAEC,
+    return _lock.synchronized(() async {
+      _printLog("初始化播放器,采样率$sampleRateInHz");
+      await _channel.invokeMethod("setUpPlayer", {
+        "sampleRateInHz": sampleRateInHz,
+        "playerId": playerId,
+        "streamType": streamType.value,
+        "enableAEC": enableAEC,
+      });
     });
   }
 
@@ -127,37 +122,32 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    if (_dispose) {
-      _printLog("播放器已销毁");
-      return;
-    }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
-      return;
-    }
-    if (_isPlayingNow) {
-      if (await isPlaying) {
+    return _lock.synchronized(() async {
+      if (_dispose) {
+        _printLog("播放器已销毁");
         return;
       }
-    }
-
-    _startwatch.reset();
-    _startwatch.start();
-    _isPlayingNow = true;
-    _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-          "playerId": playerId,
-        }) ??
-        false;
-    if (_isPlayingNow) {
-      _playingFail = false;
-      _startwatch.stop();
-      _printLog("开始播放:${_startwatch.elapsedMilliseconds}ms");
-    } else {
-      if (!_playingFail) {
-        _playingFail = true;
-        _printLog("播放失败");
+      if (_isPlayingNow) {
+        return;
       }
-    }
+      _startwatch.reset();
+      _startwatch.start();
+      _isPlayingNow = true;
+      _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
+            "playerId": playerId,
+          }) ??
+          false;
+      if (_isPlayingNow) {
+        _playingFail = false;
+        _startwatch.stop();
+        _printLog("开始播放:${_startwatch.elapsedMilliseconds}ms");
+      } else {
+        if (!_playingFail) {
+          _playingFail = true;
+          _printLog("播放失败");
+        }
+      }
+    });
   }
 
   /**
@@ -172,10 +162,6 @@ class PCMPlayer {
       _printLog("播放器已销毁");
       return;
     }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
-      return;
-    }
     return _channel.invokeMethod("feedPlaying", {
       "data": data,
       "playerId": playerId,
@@ -188,27 +174,26 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    if (_dispose) {
-      _printLog("播放器已销毁");
-      return;
-    }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
-      return;
-    }
-
-    bool printStop = _isPlayingNow;
-    _stopwatch.reset();
-    _stopwatch.start();
-    _isPlayingNow = false;
-    _playingFail = false;
-    await _channel.invokeMethod("pausePlaying", {
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (_dispose) {
+        _printLog("播放器已销毁");
+        return;
+      }
+      if (!_isPlayingNow) {
+        return;
+      }
+      bool printStop = _isPlayingNow;
+      _stopwatch.reset();
+      _stopwatch.start();
+      _isPlayingNow = false;
+      await _channel.invokeMethod("pausePlaying", {
+        "playerId": playerId,
+      });
+      if (printStop) {
+        _stopwatch.stop();
+        _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
+      }
     });
-    if (printStop) {
-      _stopwatch.stop();
-      _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
-    }
   }
 
   ///结束播放(销毁播放器)
@@ -217,23 +202,25 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    if (_dispose) {
-      _printLog("播放器已销毁");
-      return;
-    }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
-      return;
-    }
-    await stop();
-    _sampleRateInHz = null;
-    _dispose = true;
-    _playingFail = false;
-    _isPlayingNow = false;
-    await _channel.invokeMethod("stopPlaying", {
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (_dispose) {
+        _printLog("播放器已销毁");
+        return;
+      }
+      bool printStop = _isPlayingNow;
+      _stopwatch.reset();
+      _stopwatch.start();
+      _dispose = true;
+      _isPlayingNow = false;
+      await _channel.invokeMethod("stopPlaying", {
+        "playerId": playerId,
+      });
+      if (printStop) {
+        _stopwatch.stop();
+        _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
+      }
+      _printLog("销毁播放器");
     });
-    _printLog("销毁播放器");
   }
 
   ///清空播放数据
@@ -244,10 +231,6 @@ class PCMPlayer {
     }
     if (_dispose) {
       _printLog("播放器已经销毁");
-      return;
-    }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
       return;
     }
     await _channel.invokeMethod("clearPlaying", {
@@ -261,16 +244,14 @@ class PCMPlayer {
       print("not support platform");
       return false;
     }
-    if (_dispose) {
-      _printLog("播放器已经销毁");
-      return false;
-    }
-    if (!_hasSetUp) {
-      _printLog("播放器未初始化");
-      return false;
-    }
-    return await _channel.invokeMethod("isPlaying", {
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (_dispose) {
+        _printLog("播放器已经销毁");
+        return false;
+      }
+      return await _channel.invokeMethod("isPlaying", {
+        "playerId": playerId,
+      });
     });
   }
 
@@ -280,8 +261,16 @@ class PCMPlayer {
       print("not support platform");
       return 0;
     }
-    return await _channel.invokeMethod("remainingFrames", {
+    if (_dispose) {
+      _printLog("播放器已经销毁");
+      return 0;
+    }
+    int remain = await _channel.invokeMethod("remainingFrames", {
       "playerId": playerId,
     });
+    if (_dispose) {
+      remain = 0;
+    }
+    return remain;
   }
 }

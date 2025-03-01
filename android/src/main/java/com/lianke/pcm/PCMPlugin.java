@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -49,8 +50,8 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     private ActivityPluginBinding activityBinding;
     private Map<Integer, PermissionCallback> permissionCallbackMap = new HashMap<>();
 
-    private Map<String, PCMPlayer> players = new HashMap<>();
-    private Map<String, ExecutorService> playOpServices = new HashMap<>();
+    private Map<String, PCMPlayer> players = new LinkedHashMap<>();
+    private Map<String, ExecutorService> playOpServices = new LinkedHashMap<>();
 
     ExecutorService recordOpService = Executors.newSingleThreadExecutor();
 
@@ -127,12 +128,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                playOpServices.get(playerId).submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        players.get(playerId).start();
-                        result.success(players.get(playerId).isPlaying());
+                playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(false);
+                        return;
                     }
+                    players.get(playerId).start();
+                    result.success(players.get(playerId).isPlaying());
                 });
             }
         } else if ("pausePlaying".equals(method)) {
@@ -141,6 +143,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
             } else {
                 playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(false);
+                        return;
+                    }
                     players.get(playerId).pause();
                     result.success(true);
                 });
@@ -150,7 +156,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             if (!players.containsKey(playerId)) {
                 result.success(false);
             } else {
-                playOpServices.get(playerId).submit(() -> result.success(players.get(playerId).isPlaying()));
+                playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(false);
+                        return;
+                    }
+                    result.success(players.get(playerId).isPlaying());
+                });
             }
         } else if ("stopPlaying".equals(method)) {
             String playerId = call.argument("playerId");
@@ -158,6 +170,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
             } else {
                 playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(false);
+                        return;
+                    }
                     players.get(playerId).stop();
                     players.remove(playerId);
                     playOpServices.remove(playerId);
@@ -167,12 +183,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("clearPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (players.containsKey(playerId)) {
-                playOpServices.get(playerId).submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        players.get(playerId).clear();
+                playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
                         result.success(true);
+                        return;
                     }
+                    players.get(playerId).clear();
+                    result.success(true);
                 });
             } else {
                 result.success(true);
@@ -183,16 +200,20 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             if (!players.containsKey(playerId)) {
                 result.success(0);
             } else {
-                playOpServices.get(playerId).submit(() -> result.success(players.get(playerId).remainingFrames()));
+                playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(0);
+                        return;
+                    }
+                    result.success(players.get(playerId).remainingFrames());
+                });
             }
         } else if ("feedPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (players.containsKey(playerId)) {
-                playOpServices.get(playerId).submit(() -> {
-                    byte[] data = call.argument("data");
-                    players.get(playerId).feed(data);
-                    result.success(true);
-                });
+                byte[] data = call.argument("data");
+                players.get(playerId).feed(data);
+                result.success(true);
             } else {
                 result.success(true);
             }

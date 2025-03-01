@@ -74,7 +74,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                                 print("获取焦点失败")
                             }
                         }
-                        var success = PCMRecorderClient.shared.setUp(samplateRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
+                        var success = PCMRecorderClient.shared.setUp(sampleRate: sampleRateInHz, preFrameSize: preFrameSize,enableAEC: enableAEC)
                         if(success){
                             success =  PCMRecorderClient.shared.start()
                         }
@@ -108,7 +108,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 players[playerId] = player
                 playOpQueues[playerId] = queue
                 queue.async {
-                    player.setUp(samplateRate: sampleRateInHz,enableAEC: enableAEC)
+                    player.setUp(sampleRate: sampleRateInHz,enableAEC: enableAEC)
                     result(true)
                 }
                 return
@@ -126,8 +126,11 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                     result(false)
                     return
                 }
-                
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(false)
+                        return
+                    }
                     self.players[playerId]?.start()
                     result(self.players[playerId]!.isPlaying)
                 }
@@ -140,6 +143,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(false)
             }else{
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(false)
+                        return;
+                    }
                     self.players[playerId]?.stop()
                     self.players.removeValue(forKey: playerId)
                     self.playOpQueues.removeValue(forKey: playerId)
@@ -155,6 +162,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(false)
             }else{
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(false)
+                        return;
+                    }
                     self.players[playerId]?.pause()
                     result(true)
                 }
@@ -167,6 +178,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(true)
             }else{
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(true)
+                        return;
+                    }
                     self.players[playerId]?.clear()
                     result(true)
                 }
@@ -179,6 +194,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(false)
             }else{
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(false)
+                        return;
+                    }
                     result(self.players[playerId]!.isPlaying)
                 }
             }
@@ -190,6 +209,10 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 result(0)
             }else{
                 playOpQueues[playerId]?.async {
+                    if(self.players[playerId] == nil){
+                        result(0)
+                        return
+                    }
                     result(self.players[playerId]!.remainingFrames())
                 }
             }
@@ -201,9 +224,8 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             if(players[playerId] == nil){
                 result(true)
             }else{
-                playOpQueues[playerId]?.async {
-                    self.players[playerId]?.feed(audio: data.data)
-                }
+                self.players[playerId]?.feed(audio: data.data)
+                result(true)
             }
         }
         else if(method == "hotRestart"){
