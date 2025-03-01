@@ -62,7 +62,10 @@ class PCMPlayer {
       bool enableAEC = false,
       AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
-    setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
+    setUp(
+        sampleRateInHz: sampleRateInHz,
+        streamType: streamType,
+        enableAEC: enableAEC);
   }
 
   String _threeDigits(int n) {

@@ -15,7 +15,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  PCMPlayer player = PCMPlayer();
+  PCMPlayer player = PCMPlayer(enableAEC: true);
 
   @override
   void initState() {
@@ -35,7 +35,6 @@ class _MyAppState extends State<MyApp> {
                   TextButton(
                       onPressed: () async {
                         List<int> list = [];
-                        player.stop();
                         await PCMRecorder.requestRecordPermission();
                         PCMRecorder.start(
                             echoCancel: true,
@@ -54,7 +53,7 @@ class _MyAppState extends State<MyApp> {
                   TextButton(
                       onPressed: () {
                         PCMRecorder.stop();
-                        //player.stop();
+                        player.stop();
                       },
                       child: Text('结束录音')),
                 ],
