@@ -14,8 +14,8 @@ class PCMPlayerClient {
     
 
     
-    public func setUp(samplateRate:Int){
-        player.setUp(Double(samplateRate));
+    public func setUp(samplateRate:Int,enableAEC:Bool){
+        player.setUp(Double(samplateRate),enableAEC: enableAEC);
     }
     
     

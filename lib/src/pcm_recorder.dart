@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
@@ -19,8 +20,13 @@ class _InnerPCMRecorder {
   Stopwatch _startWatch = Stopwatch();
   Stopwatch _stopWatch = Stopwatch();
 
-  ///是否打印日志
-  bool enableLog = true;
+  ///是否打印日志(debug模式下默认打开)
+  bool _enableLog = kDebugMode;
+
+  ///是否开启打印日志
+  void enableLog(bool enable) {
+    _enableLog = enable;
+  }
 
   String _threeDigits(int n) {
     if (n >= 100) return "${n}";
@@ -34,7 +40,7 @@ class _InnerPCMRecorder {
   }
 
   void _printLog(String message) {
-    if (enableLog) {
+    if (_enableLog) {
       DateTime now = DateTime.now();
       String h = _twoDigits(now.hour);
       String min = _twoDigits(now.minute);
@@ -67,17 +73,18 @@ class _InnerPCMRecorder {
    * [preFrameSize]每次获取回调数据大小
    * [echoCancel]是否开启回音消除(设备支持的情况下),开启后录音可能会被影响
    * Android上开启回声消除使用VOICE_COMMUNICATION录音
-   * iOS开启后会导致启动MIC变慢,并且音量变小,销毁也会耗时,并且Options也会变更,会导致移除配置的BluetoothA2dp,mode也会变成VoiceChat
+   * iOS开启后会导致启动MIC变慢,并且音量变小(这个时候对应的PCMPlayer也需要开启回声消除配置),销毁也会耗时,并且Options也会变更,会导致移除配置的BluetoothA2dp,mode也会变成VoiceChat
    * [autoGain]是否开启自动增益(设备支持的情况下),only android,开启后录音音量可能会被影响
    * [noiseSuppress]是否开启降噪(设备支持的情况下)，only android,开启后录音音量可能会被影响
    * [onData] 音频数据回调
    */
-  Future<bool> start({int sampleRateInHz = 8000,
-    int preFrameSize = 320,
-    bool echoCancel = false,
-    bool autoGain = false,
-    bool noiseSuppress = false,
-    Function(Uint8List?)? onData}) async {
+  Future<bool> start(
+      {int sampleRateInHz = 8000,
+      int preFrameSize = 320,
+      bool echoCancel = false,
+      bool autoGain = false,
+      bool noiseSuppress = false,
+      Function(Uint8List?)? onData}) async {
     if (isRecordingNow) {
       if (await isRecording) {
         _printLog("正在录音中");

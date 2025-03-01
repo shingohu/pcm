@@ -17,6 +17,7 @@
     double sampleRate ;
     NSMutableData* mSamples;
     BOOL hasInitAudioUnit;
+    bool enableAEC;
 }
 
 - (instancetype)init
@@ -30,12 +31,14 @@
 }
 
 
-- (void)setUp:(double)sampleRate{
-    if(audioUnit != nil && self->sampleRate != sampleRate){
+- (void)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC{
+    if(audioUnit != nil && (self->sampleRate != sampleRate || self->enableAEC != enableAEC)){
         [self stop];
     }
+    self->sampleRate = sampleRate;
+    self->enableAEC = enableAEC;
     if(audioUnit == nil){
-        [self setupRemoteIOUnit:sampleRate];
+        [self setupRemoteIOUnit:sampleRate enableAEC:enableAEC];
     }
 }
 
@@ -115,11 +118,19 @@
 }
 
 
-- (void)setupRemoteIOUnit:(double)sampleRate{
+- (void)setupRemoteIOUnit:(double)sampleRate enableAEC:(BOOL)enableAEC{
     self->sampleRate = sampleRate;
     //Create nodes and add to the graph
     AudioComponentDescription inputcd = {0};
     inputcd.componentType = kAudioUnitType_Output;
+    
+    //kAudioUnitSubType_VoiceProcessingIO
+    //kAudioUnitSubType_RemoteIO
+    if(enableAEC){
+        inputcd.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    }else{
+        inputcd.componentSubType = kAudioUnitSubType_RemoteIO;
+    }
     inputcd.componentSubType = kAudioUnitSubType_RemoteIO;
     inputcd.componentManufacturer = kAudioUnitManufacturer_Apple;
     inputcd.componentFlagsMask = 0;

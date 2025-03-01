@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -30,6 +31,9 @@ class PCMPlayer {
   final String playerId;
 
   ///是否已经销毁
+  bool get isDispose => _dispose;
+
+  ///是否已经销毁
   bool _dispose = false;
 
   ///是否已经初始化
@@ -38,18 +42,25 @@ class PCMPlayer {
   ///初始化采样率
   int? _sampleRateInHz;
 
-  ///是否打印日志
-  bool enableLog = true;
-
+  ///播放失败标记
   bool _playingFail = false;
 
   Stopwatch _stopwatch = Stopwatch();
   Stopwatch _startwatch = Stopwatch();
 
+  ///是否打印日志(debug模式下默认打开)
+  bool _enableLog = kDebugMode;
 
-  PCMPlayer({String? playerId,
-    int sampleRateInHz = 8000,
-    AudioStreamType streamType = AudioStreamType.music})
+  ///是否开启打印日志
+  void enableLog(bool enable) {
+    _enableLog = enable;
+  }
+
+  PCMPlayer(
+      {String? playerId,
+      int sampleRateInHz = 8000,
+      bool enableAEC = false,
+      AudioStreamType streamType = AudioStreamType.music})
       : playerId = playerId ?? _uuid.v4() {
     setUp(sampleRateInHz: sampleRateInHz, streamType: streamType);
   }
@@ -66,7 +77,7 @@ class PCMPlayer {
   }
 
   void _printLog(String message) {
-    if (enableLog) {
+    if (_enableLog) {
       DateTime now = DateTime.now();
       String h = _twoDigits(now.hour);
       String min = _twoDigits(now.minute);
@@ -85,9 +96,11 @@ class PCMPlayer {
   ///初始化播放器
   ///[sampleRateInHz]采样率
   ///[streamType] the type of the audio stream [only android]
+  ///[enableAEC]iOS是否设置回音消除的subType [only iOS]
   Future<void> setUp({
     int sampleRateInHz = 8000,
     AudioStreamType streamType = AudioStreamType.music,
+    bool enableAEC = false,
   }) async {
     if (!_supportPlatform()) {
       print("not support platform");
@@ -101,6 +114,7 @@ class PCMPlayer {
       "sampleRateInHz": sampleRateInHz,
       "playerId": playerId,
       "streamType": streamType.value,
+      "enableAEC": enableAEC,
     });
   }
 
@@ -128,8 +142,8 @@ class PCMPlayer {
     _startwatch.start();
     _isPlayingNow = true;
     _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
-      "playerId": playerId,
-    }) ??
+          "playerId": playerId,
+        }) ??
         false;
     if (_isPlayingNow) {
       _playingFail = false;
@@ -208,9 +222,7 @@ class PCMPlayer {
       _printLog("播放器未初始化");
       return;
     }
-    if (_isPlayingNow) {
-      _printLog("结束播放");
-    }
+    await stop();
     _sampleRateInHz = null;
     _dispose = true;
     _playingFail = false;
@@ -218,6 +230,7 @@ class PCMPlayer {
     await _channel.invokeMethod("stopPlaying", {
       "playerId": playerId,
     });
+    _printLog("销毁播放器");
   }
 
   ///清空播放数据

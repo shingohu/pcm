@@ -100,6 +100,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
             requestRecordPermission(result: result)
         }else if(method == "setUpPlayer"){
             let sampleRateInHz:Int =  (call.arguments as! Dictionary<String, Any>)["sampleRateInHz"] as! Int
+            let enableAEC =  (call.arguments as! Dictionary<String, Any>)["enableAEC"]  as! Bool
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
             if(players[playerId] == nil){
                 let player = PCMPlayerClient()
@@ -107,7 +108,7 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler,UIApplicati
                 players[playerId] = player
                 playOpQueues[playerId] = queue
                 queue.async {
-                    player.setUp(samplateRate: sampleRateInHz)
+                    player.setUp(samplateRate: sampleRateInHz,enableAEC: enableAEC)
                     result(true)
                 }
                 return

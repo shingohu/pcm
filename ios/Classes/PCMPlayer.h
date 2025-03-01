@@ -18,7 +18,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, assign) BOOL isRunning;
 
-- (void)setUp:(double)sampleRate;
+- (void)setUp:(double)sampleRate enableAEC:(BOOL)enableAEC;
 - (void)start;
 - (void)pause;
 - (void)stop;
