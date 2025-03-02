@@ -19,7 +19,8 @@ public class PCMPlayer {
 
     private final static String TAG = "PCMPlayer";
 
-    private int MAX_FRAMES_PER_BUFFER = 80;
+    //10ms 数据大小
+    private int MAX_FRAMES_PER_BUFFER = 160;
 
     //=======================AudioTrack Default Settings=======================
     private static final int STREAM_MUSIC = AudioManager.STREAM_MUSIC;
@@ -54,6 +55,11 @@ public class PCMPlayer {
                 stop();
             }
         }
+        int samplesPer10ms = sampleRateInHz / 100;
+
+        // 计算数据大小（字节数）
+        MAX_FRAMES_PER_BUFFER = (samplesPer10ms * 16 * 1) / 8;
+
         if (mPlayer == null) {
             int mMinBufferSize = (AudioTrack.getMinBufferSize(sampleRateInHz,
                     DEFAULT_CHANNEL_CONFIG, DEFAULT_AUDIO_FORMAT));
@@ -112,11 +118,9 @@ public class PCMPlayer {
             while (isPlaying && !Thread.interrupted()) {
                 if (!mSamplesIsEmpty()) {
                     ByteBuffer data = mSamplesPop();
-                    if (data != null) {
-                        data = data.duplicate();
-                    }
                     if (data != null && mPlayer != null) {
-                        mPlayer.write(data, data.remaining(), AudioTrack.WRITE_BLOCKING);
+                        int length = data.remaining();
+                        mPlayer.write(data, length, AudioTrack.WRITE_BLOCKING);
                     }
                 }
             }
@@ -211,9 +215,7 @@ public class PCMPlayer {
         int offset = 0;
         while (offset < buffer.length) {
             int length = Math.min(buffer.length - offset, maxSize);
-            ByteBuffer b = ByteBuffer.allocate(length);
-            b.put(buffer, offset, length);
-            b.rewind();
+            ByteBuffer b = ByteBuffer.wrap(buffer, offset, length);
             chunks.add(b);
             offset += length;
         }

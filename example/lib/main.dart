@@ -53,10 +53,14 @@ class _MyAppState extends State<MyApp> {
                   TextButton(
                       onPressed: () {
                         PCMRecorder.stop();
-                        player.stop();
                       },
                       child: Text('结束录音')),
-                  TextButton(onPressed: () async {}, child: Text('测试')),
+                  TextButton(
+                      onPressed: () async {
+                        print('点击停止${DateTime.now().millisecondsSinceEpoch}');
+                        player.stop();
+                      },
+                      child: Text('测试')),
                 ],
               ),
             ),
