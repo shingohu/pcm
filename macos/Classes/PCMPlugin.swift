@@ -268,18 +268,16 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
     
     ///录音回调
     public func recordAudioCallBack(_ audioData: Data?)->Void {
-        DispatchQueue.main.async {
-            if(audioData != nil){
-                if(self.pcmStreamSink != nil){
-                    self.pcmStreamSink!(FlutterStandardTypedData.init(bytes: audioData!))
-                }
-            }else{
-                if(self.pcmStreamSink != nil){
-                    ///录音结束
-                    self.pcmStreamSink!(nil)
-                }
-            }
-        }
+         if(audioData != nil){
+                        if(self.pcmStreamSink != nil){
+                            self.pcmStreamSink!(FlutterStandardTypedData.init(bytes: audioData!))
+                        }
+                    }else{
+                        if(self.pcmStreamSink != nil){
+                            ///录音结束
+                            self.pcmStreamSink!(nil)
+                        }
+                    }
     }
     
     
