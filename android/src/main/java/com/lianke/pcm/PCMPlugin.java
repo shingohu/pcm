@@ -176,6 +176,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                     }
                     players.get(playerId).stop();
                     players.remove(playerId);
+                    playOpServices.get(playerId).shutdown();
                     playOpServices.remove(playerId);
                     result.success(true);
                 });
@@ -249,6 +250,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     void clearAllPlayer() {
         for (PCMPlayer player : players.values()) {
             player.stop();
+        }
+        for (ExecutorService service : playOpServices.values()) {
+            service.shutdown();
         }
         players.clear();
         playOpServices.clear();
