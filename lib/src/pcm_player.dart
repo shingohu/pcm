@@ -179,9 +179,10 @@ class PCMPlayer {
         _printLog("播放器已销毁");
         return;
       }
-      if (!_isPlayingNow) {
+      if (!_isPlayingNow && !_playingFail) {
         return;
       }
+      _playingFail = false;
       bool printStop = _isPlayingNow;
       _stopwatch.reset();
       _stopwatch.start();
