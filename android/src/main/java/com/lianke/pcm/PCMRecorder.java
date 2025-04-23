@@ -17,7 +17,10 @@ import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
 
 /**
@@ -47,14 +50,22 @@ public class PCMRecorder {
     private int PRE_READ_LENGTH = 320;
 
     private Thread mAudioHandleRunner = null;
-    private RecordListener recordListener;
     private final ByteArrayOutputStream mSampleBuffer = new ByteArrayOutputStream();
     private int readBufferIndex = 0;
 
     private AudioDeviceInfo audioDeviceInfo;
 
-    public void setRecordListener(RecordListener recordListener) {
-        this.recordListener = recordListener;
+    List<RecordListener> recordListeners = new ArrayList<>();
+
+
+    public void addRecordListener(RecordListener recordListener) {
+        if (!recordListeners.contains(recordListener)) {
+            recordListeners.add(recordListener);
+        }
+    }
+
+    public void removeRecordListener(RecordListener recordListener) {
+        recordListeners.remove(recordListener);
     }
 
     /**
@@ -172,7 +183,7 @@ public class PCMRecorder {
                                 byte[] buffer = new byte[length];
                                 System.arraycopy(mSampleBuffer.toByteArray(), readBufferIndex, buffer, 0, length);
                                 readBufferIndex += length;
-                                if (recordListener != null) {
+                                for (RecordListener recordListener : recordListeners) {
                                     recordListener.onAudioProcess(buffer);
                                 }
                             }
@@ -183,7 +194,7 @@ public class PCMRecorder {
                 }
                 mSampleBuffer.reset();
                 readBufferIndex = 0;
-                if (recordListener != null) {
+                for (RecordListener recordListener : recordListeners) {
                     recordListener.onAudioProcess(null);
                 }
             }
@@ -261,7 +272,7 @@ public class PCMRecorder {
                 }
             }
         } else {
-           // print("设备不支持NS");
+            // print("设备不支持NS");
         }
     }
 

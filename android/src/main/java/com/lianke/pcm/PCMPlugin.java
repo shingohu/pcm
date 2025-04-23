@@ -43,27 +43,38 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     private MethodChannel pcmMethodChannel;
     private EventChannel pcmStreamChannel;
     private EventChannel.EventSink pcmStreamSink;
-    private Handler uiHandler = new Handler(Looper.getMainLooper());
+    private Handler uiHandler;
 
     private Context applicationContext;
     private Activity mActivity;
     private ActivityPluginBinding activityBinding;
-    private Map<Integer, PermissionCallback> permissionCallbackMap = new HashMap<>();
+    private Map<Integer, PermissionCallback> permissionCallbackMap;
 
-    private Map<String, PCMPlayer> players = new LinkedHashMap<>();
-    private Map<String, ExecutorService> playOpServices = new LinkedHashMap<>();
+    private Map<String, PCMPlayer> players;
+    private Map<String, ExecutorService> playOpServices;
 
-    ExecutorService recordOpService = Executors.newSingleThreadExecutor();
+    private ExecutorService recordOpService;
+
+    /// 多引擎模式下,谁创建,谁管理
+    private boolean isRecordingByThisEngine = false;
+
+    private RecordListener recordListener;
 
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         applicationContext = flutterPluginBinding.getApplicationContext();
+        uiHandler = new Handler(Looper.getMainLooper());
+        permissionCallbackMap = new HashMap<>();
+        players = new LinkedHashMap<>();
+        playOpServices = new LinkedHashMap<>();
+        recordOpService = Executors.newSingleThreadExecutor();
+        recordListener = new PCMRecordListener();
+
         pcmMethodChannel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm");
         pcmMethodChannel.setMethodCallHandler(this);
         pcmStreamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "com.lianke.pcm.stream");
         pcmStreamChannel.setStreamHandler(this);
-        setPCMListener();
     }
 
     @Override
@@ -76,7 +87,9 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 result.success(false);
                 return;
             }
+            addPCMRecordListener();
             recordOpService.submit(() -> {
+                isRecordingByThisEngine = true;
                 int sampleRateInHz = call.argument("sampleRateInHz");
                 int preFrameSize = call.argument("preFrameSize");
                 boolean enableAEC = Boolean.TRUE.equals(call.argument("enableAEC"));
@@ -86,6 +99,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
                 if (success) {
                     success = PCMRecorder.shared().start();
                 }
+                isRecordingByThisEngine = success;
                 result.success(success);
             });
 
@@ -93,7 +107,10 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             recordOpService.submit(() -> result.success(PCMRecorder.shared().isRecording()));
         } else if ("stopRecording".equals(method)) {
             recordOpService.submit(() -> {
-                PCMRecorder.shared().stop();
+                if (isRecordingByThisEngine) {
+                    PCMRecorder.shared().stop();
+                    isRecordingByThisEngine = false;
+                }
                 result.success(true);
             });
         } else if ("setRecordPreferredDevice".equals(method)) {
@@ -228,9 +245,8 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     AudioDeviceInfo findInputAudioDevice(int id) {
         if (applicationContext != null) {
             AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
-            AudioDeviceInfo[] allDeviceInfo = new AudioDeviceInfo[0];
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                allDeviceInfo = audioManager.getDevices(GET_DEVICES_INPUTS);
+                AudioDeviceInfo[] allDeviceInfo = audioManager.getDevices(GET_DEVICES_INPUTS);
                 for (AudioDeviceInfo device : allDeviceInfo) {
                     if (device.getId() == id) {
                         return device;
@@ -243,7 +259,11 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
 
     void hotRestart() {
-        PCMRecorder.shared().stop();
+        removePCMRecordListener();
+        if (isRecordingByThisEngine) {
+            PCMRecorder.shared().stop();
+            isRecordingByThisEngine = false;
+        }
         clearAllPlayer();
     }
 
@@ -264,6 +284,15 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         pcmMethodChannel.setMethodCallHandler(null);
         pcmStreamChannel.setStreamHandler(null);
         pcmStreamSink = null;
+        pcmMethodChannel = null;
+        pcmStreamChannel = null;
+        uiHandler = null;
+        players = null;
+        playOpServices = null;
+        recordOpService.shutdown();
+        recordOpService = null;
+        recordListener = null;
+        permissionCallbackMap = null;
     }
 
     @Override
@@ -277,9 +306,13 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
     }
 
 
-    //设置录音和播放监听
-    public void setPCMListener() {
-        PCMRecorder.shared().setRecordListener(new PCMRecordListener());
+    //设置录音回调监听
+    public void addPCMRecordListener() {
+        PCMRecorder.shared().addRecordListener(recordListener);
+    }
+
+    public void removePCMRecordListener() {
+        PCMRecorder.shared().removeRecordListener(recordListener);
     }
 
     @Override
