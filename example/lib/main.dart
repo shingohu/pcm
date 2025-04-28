@@ -36,16 +36,24 @@ class _MyAppState extends State<MyApp> {
                       onPressed: () async {
                         List<int> list = [];
                         await PCMRecorder.requestRecordPermission();
+                        player.play();
+                        bool start = false;
                         PCMRecorder.start(
                             echoCancel: false,
+                            noiseSuppress: true,
+                            autoGain: true,
+                            preFrameSize: 320,
                             onData: (data) {
                               if (data != null) {
                                 list.addAll(data);
-                                if (list.length >= 16000) {
-                                  player.play();
-                                  player.feed(Uint8List.fromList(list));
-                                  list.clear();
-                                }
+                                // if (list.length >= 320 * 20 || start == true) {
+                                //   start = true;
+                                //   player.feed(Uint8List.fromList(list));
+                                //   list.clear();
+                                // }
+                              } else {
+                                player.play();
+                                player.feed(Uint8List.fromList(list));
                               }
                             });
                       },
@@ -60,7 +68,7 @@ class _MyAppState extends State<MyApp> {
                         print('点击停止${DateTime.now().millisecondsSinceEpoch}');
                         player.stop();
                       },
-                      child: Text('测试')),
+                      child: Text('结束播放')),
                 ],
               ),
             ),

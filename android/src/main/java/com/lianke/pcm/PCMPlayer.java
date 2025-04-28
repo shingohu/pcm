@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,10 +34,7 @@ public class PCMPlayer {
 
     }
 
-
-    private final Lock samplesLock = new ReentrantLock();
-    private final LinkedList<ByteBuffer> mSampleBuffer = new LinkedList<>();
-
+    private final LinkedBlockingQueue<byte[]> mSampleBuffer = new LinkedBlockingQueue<>();
     private volatile AudioTrack mPlayer;
 
     private Thread mAudioPlayingRunner = null;
@@ -116,13 +114,18 @@ public class PCMPlayer {
             ///设置优先级
             Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
             while (isPlaying && !Thread.interrupted()) {
-                if (!mSamplesIsEmpty()) {
-                    ByteBuffer data = mSamplesPop();
-                    if (data != null && mPlayer != null) {
-                        int length = data.remaining();
-                        mPlayer.write(data, length, AudioTrack.WRITE_BLOCKING);
-                    }
+                byte[] data;
+                try {
+                    // blocks indefinitely until new data
+                    data = mSamplesTake();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    continue;
                 }
+                if (data != null && mPlayer != null) {
+                    mPlayer.write(data, 0, data.length);
+                }
+                //System.err.println("剩余:" + mSamplesRemainingFrames());
             }
         });
         mAudioPlayingRunner.setPriority(Thread.MAX_PRIORITY);
@@ -190,52 +193,43 @@ public class PCMPlayer {
 
 
     private void mSamplesClear() {
-        samplesLock.lock();
         mSampleBuffer.clear();
-        samplesLock.unlock();
     }
 
-
-    private ByteBuffer mSamplesPop() {
-        samplesLock.lock();
-        ByteBuffer out = mSampleBuffer.poll();
-        samplesLock.unlock();
-        return out;
+    private byte[] mSamplesTake() throws InterruptedException {
+        return mSampleBuffer.take();
     }
 
     private void mSamplesPush(byte[] buffer) {
-        samplesLock.lock();
-        List<ByteBuffer> got = split(buffer, MAX_FRAMES_PER_BUFFER);
-        mSampleBuffer.addAll(got);
-        samplesLock.unlock();
+        try {
+            List<byte[]> got = split(buffer, MAX_FRAMES_PER_BUFFER);
+            for (byte[] b : got) {
+                mSampleBuffer.put(b);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
-    private List<ByteBuffer> split(byte[] buffer, int maxSize) {
-        List<ByteBuffer> chunks = new ArrayList<>();
+    private List<byte[]> split(byte[] buffer, int maxSize) {
+        List<byte[]> chunks = new ArrayList<>();
         int offset = 0;
         while (offset < buffer.length) {
             int length = Math.min(buffer.length - offset, maxSize);
-            ByteBuffer b = ByteBuffer.wrap(buffer, offset, length);
+            byte[] b = new byte[length];
+            System.arraycopy(buffer, offset, b, 0, length);
             chunks.add(b);
             offset += length;
         }
         return chunks;
     }
 
-    private boolean mSamplesIsEmpty() {
-        samplesLock.lock();
-        boolean out = mSampleBuffer.size() == 0;
-        samplesLock.unlock();
-        return out;
-    }
 
     private long mSamplesRemainingFrames() {
-        samplesLock.lock();
         long totalBytes = 0;
-        for (ByteBuffer sampleBuffer : mSampleBuffer) {
-            totalBytes += sampleBuffer.remaining();
+        for (byte[] bytes : mSampleBuffer) {
+            totalBytes += bytes.length;
         }
-        samplesLock.unlock();
         return totalBytes;
     }
 
@@ -246,6 +240,7 @@ public class PCMPlayer {
             try {
                 mAudioPlayingRunner.join();
             } catch (InterruptedException e) {
+                e.printStackTrace();
                 Thread.currentThread().interrupt();
             }
             mAudioPlayingRunner = null;
