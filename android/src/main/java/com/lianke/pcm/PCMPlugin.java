@@ -2,6 +2,7 @@ package com.lianke.pcm;
 
 
 import static android.media.AudioManager.GET_DEVICES_INPUTS;
+import static android.media.AudioManager.GET_DEVICES_OUTPUTS;
 
 import android.Manifest;
 import android.app.Activity;
@@ -21,6 +22,7 @@ import androidx.core.content.PermissionChecker;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -229,11 +231,44 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         } else if ("feedPlaying".equals(method)) {
             String playerId = call.argument("playerId");
             if (players.containsKey(playerId)) {
-                byte[] data = call.argument("data");
-                players.get(playerId).feed(data);
-                result.success(true);
+                playOpServices.get(playerId).submit(() -> {
+                    if (!players.containsKey(playerId)) {
+                        result.success(true);
+                        return;
+                    }
+                    byte[] data = call.argument("data");
+                    players.get(playerId).feed(data);
+                    result.success(true);
+                });
             } else {
                 result.success(true);
+            }
+        } else if ("setPlayPreferredDevice".equals(method)) {
+            int deviceId = call.argument("deviceId");
+            AudioDeviceInfo audioDeviceInfo;
+            if (deviceId != 0) {
+                audioDeviceInfo = findOutputAudioDevice(deviceId);
+            } else {
+                audioDeviceInfo = null;
+            }
+            PCMPlayer.preferredDevice = audioDeviceInfo;
+            Set<String> playerIds = players.keySet();
+            final int[] i = {0};
+            int size = playerIds.size();
+            if (size == 0) {
+                result.success(true);
+            } else {
+                for (String playerId : playerIds) {
+                    playOpServices.get(playerId).submit(() -> {
+                        i[0]++;
+                        if (players.containsKey(playerId)) {
+                            players.get(playerId).setPreferredDevice(audioDeviceInfo);
+                        }
+                        if (i[0] == size) {
+                            result.success(true);
+                        }
+                    });
+                }
             }
         } else if ("hotRestart".equals(method)) {
             hotRestart();
@@ -247,6 +282,21 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
             AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 AudioDeviceInfo[] allDeviceInfo = audioManager.getDevices(GET_DEVICES_INPUTS);
+                for (AudioDeviceInfo device : allDeviceInfo) {
+                    if (device.getId() == id) {
+                        return device;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    AudioDeviceInfo findOutputAudioDevice(int id) {
+        if (applicationContext != null) {
+            AudioManager audioManager = (AudioManager) applicationContext.getSystemService(Context.AUDIO_SERVICE);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                AudioDeviceInfo[] allDeviceInfo = audioManager.getDevices(GET_DEVICES_OUTPUTS);
                 for (AudioDeviceInfo device : allDeviceInfo) {
                     if (device.getId() == id) {
                         return device;
@@ -276,6 +326,7 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
         }
         players.clear();
         playOpServices.clear();
+        PCMPlayer.preferredDevice = null;
     }
 
     @Override

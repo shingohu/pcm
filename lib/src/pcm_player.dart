@@ -274,4 +274,13 @@ class PCMPlayer {
     }
     return remain;
   }
+
+  ///设置播放首选设备 only android
+  ///[deviceId] 要设置的音频设备id 为0表示切换到默认设备上
+  static Future<void> setPreferredDevice(int deviceId) async {
+    if (Platform.isAndroid) {
+      return await _channel
+          .invokeMethod("setPlayPreferredDevice", {"deviceId": deviceId});
+    }
+  }
 }

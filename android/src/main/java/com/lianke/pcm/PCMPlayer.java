@@ -1,19 +1,16 @@
 package com.lianke.pcm;
 
 import android.media.AudioAttributes;
+import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
 import android.os.Process;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 
 public class PCMPlayer {
@@ -22,6 +19,9 @@ public class PCMPlayer {
 
     //10ms 数据大小
     private int MAX_FRAMES_PER_BUFFER = 160;
+
+
+    public static AudioDeviceInfo preferredDevice = null;
 
     //=======================AudioTrack Default Settings=======================
     private static final int STREAM_MUSIC = AudioManager.STREAM_MUSIC;
@@ -99,6 +99,9 @@ public class PCMPlayer {
                 );
             }
             mSamplesClear();
+        }
+        if (PCMPlayer.preferredDevice != null) {
+            setPreferredDevice(PCMPlayer.preferredDevice);
         }
     }
 
@@ -247,5 +250,12 @@ public class PCMPlayer {
         }
     }
 
-
+    public void setPreferredDevice(AudioDeviceInfo audioDeviceInfo) {
+        PCMPlayer.preferredDevice = audioDeviceInfo;
+        if (mPlayer != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                mPlayer.setPreferredDevice(audioDeviceInfo);
+            }
+        }
+    }
 }
