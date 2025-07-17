@@ -62,35 +62,34 @@
 
 - (BOOL)start{
     if(!self.isRunning && audioUnit != nil){
-        //NSInteger start1 = [self getNowDateFormatInteger];
         [self audioUnitInitialize];
-        //NSInteger start2 = [self getNowDateFormatInteger];
         BOOL error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart");
-        //NSInteger start3 = [self getNowDateFormatInteger];
-        //printf("录音开始1耗时%ld\n", (long)(start2 - start1));
-        //printf("录音开始2耗时%ld\n", (long)(start3 - start2));
         if(!error){
             self.isRunning = YES;
         }else{
+            [self audioUnitUninitialize];
+            if(audioUnit != nil){
+                AudioComponentInstanceDispose(audioUnit);
+                audioUnit = nil;
+            }
             return NO;
         }
     }
     return  self.isRunning;
 }
 
-///不销毁
+///销毁
 - (void)stop{
-    if(self.isRunning && audioUnit != nil){
-        AudioOutputUnitStop(audioUnit);
+    if(audioUnit != nil){
+        if(self.isRunning) {
+            AudioOutputUnitStop(audioUnit);
+        }
         [self audioUnitUninitialize];
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
     if(audioUnit != nil){
-        //NSInteger start = [self getNowDateFormatInteger];
         AudioComponentInstanceDispose(self->audioUnit);
-        //NSInteger start2 = [self getNowDateFormatInteger];
-        //printf("销毁耗时%ld\n", (long)(start2 - start));
         self->audioUnit = nil;
     }
 }

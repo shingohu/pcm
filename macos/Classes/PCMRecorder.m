@@ -62,13 +62,8 @@
 
 - (BOOL)start{
     if(!self.isRunning && audioUnit != nil){
-        NSInteger start1 = [self getNowDateFormatInteger];
         AudioUnitInitialize(audioUnit);
-        NSInteger start2 = [self getNowDateFormatInteger];
         BOOL error = CheckError(AudioOutputUnitStart(audioUnit),"Recorder AudioOutputUnitStart");
-        NSInteger start3 = [self getNowDateFormatInteger];
-        //printf("录音开始1耗时%ld\n", (long)(start2 - start1));
-        //printf("录音开始2耗时%ld\n", (long)(start3 - start2));
         if(!error){
             self.isRunning = YES;
         }else{
@@ -79,18 +74,13 @@
 }
 
 
-///不销毁
+///销毁
 - (void)stop{
-    if(self.isRunning && audioUnit != nil){
-        //NSInteger start = [self getNowDateFormatInteger];
-        AudioOutputUnitStop(audioUnit);
-        //NSInteger start1 = [self getNowDateFormatInteger];
+    if(audioUnit != nil){
+        if(self.isRunning ){
+            AudioOutputUnitStop(audioUnit);
+        }
         AudioUnitUninitialize(audioUnit);
-        //NSInteger start2 = [self getNowDateFormatInteger];
-        //NSInteger start3 = [self getNowDateFormatInteger];
-        //printf("停止1耗时%ld\n", (long)(start1 - start));
-        //printf("停止2耗时%ld\n", (long)(start2 - start1));
-        //printf("停止3耗时%ld\n", (long)(start3 - start2));
         self.isRunning = NO;
         self.audioCallBack(nil);
     }
