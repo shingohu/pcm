@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:synchronized/synchronized.dart';
 import 'package:uuid/uuid.dart';
 
+import 'hotrestart.dart';
+
 export 'dart:typed_data';
 
 const _uuid = Uuid();
@@ -107,7 +109,7 @@ class PCMPlayer {
     }
     return _lock.synchronized(() async {
       _printLog("初始化播放器,采样率$sampleRateInHz");
-      await _channel.invokeMethod("setUpPlayer", {
+      await _invokeMethod("setUpPlayer", {
         "sampleRateInHz": sampleRateInHz,
         "playerId": playerId,
         "streamType": streamType.value,
@@ -133,7 +135,7 @@ class PCMPlayer {
       _startwatch.reset();
       _startwatch.start();
       _isPlayingNow = true;
-      _isPlayingNow = await _channel.invokeMethod<bool>("startPlaying", {
+      _isPlayingNow = await _invokeMethod<bool>("startPlaying", {
             "playerId": playerId,
           }) ??
           false;
@@ -162,7 +164,7 @@ class PCMPlayer {
       _printLog("播放器已销毁");
       return;
     }
-    return _channel.invokeMethod("feedPlaying", {
+    return _invokeMethod("feedPlaying", {
       "data": data,
       "playerId": playerId,
     });
@@ -187,7 +189,7 @@ class PCMPlayer {
       _stopwatch.reset();
       _stopwatch.start();
       _isPlayingNow = false;
-      await _channel.invokeMethod("pausePlaying", {
+      await _invokeMethod("pausePlaying", {
         "playerId": playerId,
       });
       if (printStop) {
@@ -213,7 +215,7 @@ class PCMPlayer {
       _stopwatch.start();
       _dispose = true;
       _isPlayingNow = false;
-      await _channel.invokeMethod("stopPlaying", {
+      await _invokeMethod("stopPlaying", {
         "playerId": playerId,
       });
       if (printStop) {
@@ -234,7 +236,7 @@ class PCMPlayer {
       _printLog("播放器已经销毁");
       return;
     }
-    await _channel.invokeMethod("clearPlaying", {
+    await _invokeMethod("clearPlaying", {
       "playerId": playerId,
     });
   }
@@ -250,7 +252,7 @@ class PCMPlayer {
         _printLog("播放器已经销毁");
         return false;
       }
-      return await _channel.invokeMethod("isPlaying", {
+      return await _invokeMethod("isPlaying", {
         "playerId": playerId,
       });
     });
@@ -266,7 +268,7 @@ class PCMPlayer {
       _printLog("播放器已经销毁");
       return 0;
     }
-    int remain = await _channel.invokeMethod("remainingFrames", {
+    int remain = await _invokeMethod("remainingFrames", {
       "playerId": playerId,
     });
     if (_dispose) {
@@ -279,8 +281,16 @@ class PCMPlayer {
   ///[deviceId] 要设置的音频设备id 为0表示切换到默认设备上
   static Future<void> setPreferredDevice(int deviceId) async {
     if (Platform.isAndroid) {
-      return await _channel
-          .invokeMethod("setPlayPreferredDevice", {"deviceId": deviceId});
+      return await _invokeMethod(
+          "setPlayPreferredDevice", {"deviceId": deviceId});
     }
+  }
+
+  static Future<T?> _invokeMethod<T>(
+    String method, [
+    dynamic arguments,
+  ]) async {
+    await hotRestart();
+    return await _channel.invokeMethod<T>(method, arguments);
   }
 }

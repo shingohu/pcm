@@ -81,111 +81,116 @@ public class PCMPlugin: NSObject, FlutterPlugin,FlutterStreamHandler {
         }
         else if(method == "startPlaying"){
             let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(false)
+             if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                 playOpQueues[playerId]?.async {
+                                    if(self.players[playerId] == nil){
+                                        result(false)
+                                        return
+                                    }
+                                    self.players[playerId]?.start()
+                                    result(self.players[playerId]!.isPlaying)
+                                }
             }else{
-                playOpQueues[playerId]?.async {
-                    if(self.players[playerId] == nil){
-                        result(false)
-                        return
-                    }
-                    self.players[playerId]?.start()
-                    result(self.players[playerId]!.isPlaying)
-                }
+               result(false)
             }
         }
         
         else if(method == "stopPlaying"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(false)
-            }else{
-                playOpQueues[playerId]?.async {
-                    if(self.players[playerId] == nil){
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                            if(self.players[playerId] == nil){
+                                result(false)
+                                return;
+                            }
+                            self.players[playerId]?.stop()
+                            self.players.removeValue(forKey: playerId)
+                            self.playOpQueues.removeValue(forKey: playerId)
+                            result(true)
+                        }
+                    }else{
                         result(false)
-                        return;
                     }
-                    self.players[playerId]?.stop()
-                    self.players.removeValue(forKey: playerId)
-                    self.playOpQueues.removeValue(forKey: playerId)
-                    result(true)
                 }
-                
-            }
-        }
         
-        else if(method == "pausePlaying"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(false)
-            }else{
-                playOpQueues[playerId]?.async {
-                    if(self.players[playerId] == nil){
+         else if(method == "pausePlaying"){
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                            if(self.players[playerId] == nil){
+                                result(false)
+                                return;
+                            }
+                            self.players[playerId]?.pause()
+                            result(true)
+                        }
+                    }else{
                         result(false)
-                        return;
                     }
-                    self.players[playerId]?.pause()
-                    result(true)
                 }
-            }
-        }
         
         else if(method == "clearPlaying"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(true)
-            }else{
-                playOpQueues[playerId]?.async {
-                    if(self.players[playerId] == nil){
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                            if(self.players[playerId] == nil){
+                                result(true)
+                                return;
+                            }
+                            self.players[playerId]?.clear()
+                            result(true)
+                        }
+                    }else{
                         result(true)
-                        return;
                     }
-                    self.players[playerId]?.clear()
-                    result(true)
                 }
-            }
-        }
-        
-        else if(method == "isPlaying"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(false)
-            }else{
-                playOpQueues[playerId]?.async {
-                    if(self.players[playerId] == nil){
+
+                else if(method == "isPlaying"){
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                            if(self.players[playerId] == nil){
+                                result(false)
+                                return;
+                            }
+                            result(self.players[playerId]!.isPlaying)
+                        }
+                    }else{
                         result(false)
-                        return;
                     }
-                    result(self.players[playerId]!.isPlaying)
                 }
-            }
-        }
         
         else if(method == "remainingFrames"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            if(players[playerId] == nil){
-                result(0)
-            }else{
-                playOpQueues[playerId]?.async {
-                 if(self.players[playerId] == nil){
-                                        result(0)
-                                        return
-                               }
-                    result(self.players[playerId]!.remainingFrames())
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                            if(self.players[playerId] == nil){
+                                result(0)
+                                return
+                            }
+                            result(self.players[playerId]!.remainingFrames())
+                        }
+                    }else{
+                        result(0)
+                    }
                 }
-            }
-        }
-        
-        else if(method == "feedPlaying"){
-            let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
-            let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
-            if(players[playerId] == nil){
-                result(true)
-            }else{
-                self.players[playerId]?.feed(audio: data.data)
-                result(true)
-            }
-        }
+
+                else if(method == "feedPlaying"){
+                    let playerId =  (call.arguments as! Dictionary<String, Any>)["playerId"] as! String
+                    let data = (call.arguments as! Dictionary<String, Any>)["data"]  as! FlutterStandardTypedData
+                    if(players[playerId] != nil && playOpQueues[playerId] != nil){
+                        playOpQueues[playerId]?.async {
+                                        if(self.players[playerId] == nil){
+                                                               result(true)
+                                                               return
+                                                      }
+                                           self.players[playerId]?.feed(audio: data.data)
+                                           result(true)
+                                       }
+                    }else{
+                        result(true)
+                    }
+                }
         else if(method == "hotRestart"){
             hotRestart()
             result(true)

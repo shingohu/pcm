@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:pcm/src/hotrestart.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
 
@@ -96,13 +97,14 @@ class _InnerPCMRecorder {
     if (_supportPlatform()) {
       _startWatch.reset();
       _startWatch.start();
-      success = await _channel.invokeMethod("startRecording", {
-        "sampleRateInHz": sampleRateInHz,
-        "preFrameSize": preFrameSize,
-        "enableAEC": echoCancel,
-        "autoGain": autoGain,
-        "noiseSuppress": noiseSuppress,
-      });
+      success = (await _invokeMethod("startRecording", {
+            "sampleRateInHz": sampleRateInHz,
+            "preFrameSize": preFrameSize,
+            "enableAEC": echoCancel,
+            "autoGain": autoGain,
+            "noiseSuppress": noiseSuppress,
+          })) ??
+          false;
     } else {
       print("not support platform");
       return false;
@@ -141,7 +143,7 @@ class _InnerPCMRecorder {
   ///是否正在录音
   Future<bool> get isRecording async {
     if (_supportPlatform()) {
-      return await _channel.invokeMethod("isRecording");
+      return (await _invokeMethod("isRecording")) ?? false;
     }
     return false;
   }
@@ -151,7 +153,7 @@ class _InnerPCMRecorder {
     if (_supportPlatform()) {
       _stopWatch.reset();
       _stopWatch.start();
-      await _channel.invokeMethod("stopRecording");
+      await _invokeMethod("stopRecording");
     }
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
@@ -163,7 +165,7 @@ class _InnerPCMRecorder {
   ///请求录音权限
   Future<bool> requestRecordPermission() async {
     if (_supportPlatform()) {
-      return await _channel.invokeMethod("requestRecordPermission");
+      return (await _invokeMethod<bool>("requestRecordPermission")) ?? false;
     }
     return false;
   }
@@ -171,7 +173,7 @@ class _InnerPCMRecorder {
   ///检查录音权限
   Future<bool> checkRecordPermission() async {
     if (_supportPlatform()) {
-      return await _channel.invokeMethod("checkRecordPermission");
+      return (await _invokeMethod<bool>("checkRecordPermission")) ?? false;
     }
     return false;
   }
@@ -180,8 +182,15 @@ class _InnerPCMRecorder {
   ///only android
   Future<void> setPreferredDevice(int deviceId) async {
     if (Platform.isAndroid) {
-      return await _channel
-          .invokeMethod("setRecordPreferredDevice", {"deviceId": deviceId});
+      return _invokeMethod("setRecordPreferredDevice", {"deviceId": deviceId});
     }
+  }
+
+  Future<T?> _invokeMethod<T>(
+    String method, [
+    dynamic arguments,
+  ]) async {
+    await hotRestart();
+    return await _channel.invokeMethod<T>(method, arguments);
   }
 }
