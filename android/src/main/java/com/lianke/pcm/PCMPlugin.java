@@ -323,11 +323,11 @@ public class PCMPlugin implements FlutterPlugin, MethodCallHandler, EventChannel
 
     void clearAllPlayer() {
         try {
-            for (PCMPlayer player : players.values()) {
-                player.stop();
-            }
             for (ExecutorService service : playOpServices.values()) {
                 service.shutdown();
+            }
+            for (PCMPlayer player : players.values()) {
+                player.stop();
             }
         } catch (Exception e) {
             e.printStackTrace();

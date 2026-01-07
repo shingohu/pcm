@@ -10,8 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  uuid: any
-  synchronized: any
 
 dev_dependencies:
 

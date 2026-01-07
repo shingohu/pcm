@@ -2,14 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:synchronized/synchronized.dart';
-import 'package:uuid/uuid.dart';
 
 import 'hotrestart.dart';
+import 'simple_lock.dart';
 
 export 'dart:typed_data';
 
-const _uuid = Uuid();
 const _channel = const MethodChannel('com.lianke.pcm');
 
 ///the type of the audio stream [only android]
@@ -31,12 +29,17 @@ class PCMPlayer {
   bool get isPlayingNow => _isPlayingNow;
   bool _isPlayingNow = false;
 
-  final String playerId;
+  String get playerId => hashCode.toString();
 
-  Lock _lock = Lock();
+  SimpleLock _lock = SimpleLock();
 
   ///是否已经销毁
-  bool get isDispose => _dispose;
+  bool get isDispose {
+    if (_dispose) {
+      _cachedPlayers.remove(this);
+    }
+    return _dispose;
+  }
 
   ///是否已经销毁
   bool _dispose = false;
@@ -54,16 +57,22 @@ class PCMPlayer {
     _enableLog = enable;
   }
 
-  PCMPlayer(
-      {String? playerId,
-      int sampleRateInHz = 8000,
-      bool enableAEC = false,
-      AudioStreamType streamType = AudioStreamType.music})
-      : playerId = playerId ?? _uuid.v4() {
-    _setUp(
-        sampleRateInHz: sampleRateInHz,
-        streamType: streamType,
-        enableAEC: enableAEC);
+  ///全部创建的播放器
+  static List<PCMPlayer> _cachedPlayers = [];
+
+  ///全部创建的播放器
+  static List<PCMPlayer> get all => _cachedPlayers;
+
+  ///销毁全部的播放器
+  static void releaseAll() async {
+    for (PCMPlayer player in _cachedPlayers) {
+      player.release();
+    }
+  }
+
+  PCMPlayer({int sampleRateInHz = 8000, bool enableAEC = false, AudioStreamType streamType = AudioStreamType.music}) {
+    _setUp(sampleRateInHz: sampleRateInHz, streamType: streamType, enableAEC: enableAEC);
+    _cachedPlayers.add(this);
   }
 
   String _threeDigits(int n) {
@@ -86,7 +95,7 @@ class PCMPlayer {
       String ms = _threeDigits(now.millisecond);
 
       String time = "$h:$min:$sec.$ms";
-      print("[PCMPlayer][$time]" + message);
+      print("[$time][PCMPlayer][$playerId]" + message);
     }
   }
 
@@ -108,13 +117,13 @@ class PCMPlayer {
       return;
     }
     return _lock.synchronized(() async {
-      _printLog("初始化播放器,采样率$sampleRateInHz");
       await _invokeMethod("setUpPlayer", {
         "sampleRateInHz": sampleRateInHz,
         "playerId": playerId,
         "streamType": streamType.value,
         "enableAEC": enableAEC,
       });
+      _printLog("初始化播放器,采样率$sampleRateInHz");
     });
   }
 
@@ -125,7 +134,7 @@ class PCMPlayer {
       return;
     }
     return _lock.synchronized(() async {
-      if (_dispose) {
+      if (isDispose) {
         _printLog("播放器已销毁");
         return;
       }
@@ -142,7 +151,7 @@ class PCMPlayer {
       if (_isPlayingNow) {
         _playingFail = false;
         _startwatch.stop();
-        _printLog("开始播放:${_startwatch.elapsedMilliseconds}ms");
+        _printLog("开始播放(${_startwatch.elapsedMilliseconds}ms)");
       } else {
         if (!_playingFail) {
           _playingFail = true;
@@ -160,13 +169,15 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    if (_dispose) {
-      _printLog("播放器已销毁");
-      return;
-    }
-    return _invokeMethod("feedPlaying", {
-      "data": data,
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (isDispose) {
+        _printLog("播放器已销毁");
+        return;
+      }
+      return _invokeMethod("feedPlaying", {
+        "data": data,
+        "playerId": playerId,
+      });
     });
   }
 
@@ -177,7 +188,7 @@ class PCMPlayer {
       return;
     }
     return _lock.synchronized(() async {
-      if (_dispose) {
+      if (isDispose) {
         _printLog("播放器已销毁");
         return;
       }
@@ -194,7 +205,7 @@ class PCMPlayer {
       });
       if (printStop) {
         _stopwatch.stop();
-        _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
+        _printLog("结束播放(${_stopwatch.elapsedMilliseconds}ms)");
       }
     });
   }
@@ -206,8 +217,8 @@ class PCMPlayer {
       return;
     }
     return _lock.synchronized(() async {
-      if (_dispose) {
-        _printLog("播放器已销毁");
+      if (isDispose) {
+        _printLog("播放器已销毁1111");
         return;
       }
       bool printStop = _isPlayingNow;
@@ -218,9 +229,10 @@ class PCMPlayer {
       await _invokeMethod("stopPlaying", {
         "playerId": playerId,
       });
+      _cachedPlayers.remove(this);
       if (printStop) {
         _stopwatch.stop();
-        _printLog("停止播放:${_stopwatch.elapsedMilliseconds}ms");
+        _printLog("结束播放(${_stopwatch.elapsedMilliseconds}ms)");
       }
       _printLog("销毁播放器");
     });
@@ -232,12 +244,14 @@ class PCMPlayer {
       print("not support platform");
       return;
     }
-    if (_dispose) {
-      _printLog("播放器已经销毁");
-      return;
-    }
-    await _invokeMethod("clearPlaying", {
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (isDispose) {
+        _printLog("播放器已经销毁");
+        return;
+      }
+      await _invokeMethod("clearPlaying", {
+        "playerId": playerId,
+      });
     });
   }
 
@@ -248,7 +262,7 @@ class PCMPlayer {
       return false;
     }
     return _lock.synchronized(() async {
-      if (_dispose) {
+      if (isDispose) {
         _printLog("播放器已经销毁");
         return false;
       }
@@ -264,25 +278,26 @@ class PCMPlayer {
       print("not support platform");
       return 0;
     }
-    if (_dispose) {
-      _printLog("播放器已经销毁");
-      return 0;
-    }
-    int remain = await _invokeMethod("remainingFrames", {
-      "playerId": playerId,
+    return _lock.synchronized(() async {
+      if (isDispose) {
+        _printLog("播放器已经销毁");
+        return 0;
+      }
+      int remain = await _invokeMethod("remainingFrames", {
+        "playerId": playerId,
+      });
+      if (isDispose) {
+        remain = 0;
+      }
+      return remain;
     });
-    if (_dispose) {
-      remain = 0;
-    }
-    return remain;
   }
 
   ///设置播放首选设备 only android
   ///[deviceId] 要设置的音频设备id 为0表示切换到默认设备上
   static Future<void> setPreferredDevice(int deviceId) async {
     if (Platform.isAndroid) {
-      return await _invokeMethod(
-          "setPlayPreferredDevice", {"deviceId": deviceId});
+      return await _invokeMethod("setPlayPreferredDevice", {"deviceId": deviceId});
     }
   }
 
@@ -290,7 +305,9 @@ class PCMPlayer {
     String method, [
     dynamic arguments,
   ]) async {
-    await hotRestart();
+    if (kDebugMode) {
+      await hotRestart();
+    }
     return await _channel.invokeMethod<T>(method, arguments);
   }
 }

@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:pcm/src/hotrestart.dart';
+
+import 'hotrestart.dart';
 
 final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
 
@@ -49,15 +50,13 @@ class _InnerPCMRecorder {
       String ms = _threeDigits(now.millisecond);
 
       String time = "$h:$min:$sec.$ms";
-      print("[PCMRecorder][$time]" + message);
+      print("[$time][PCMRecorder]" + message);
     }
   }
 
   _InnerPCMRecorder._() {
     if (_supportPlatform()) {
-      _pcmStream = _streamChannel
-          .receiveBroadcastStream()
-          .map((buffer) => buffer as Uint8List?);
+      _pcmStream = _streamChannel.receiveBroadcastStream().map((buffer) => buffer as Uint8List?);
       _pcmStream?.listen((data) {
         _audioListener(data);
       });
@@ -117,7 +116,7 @@ class _InnerPCMRecorder {
       return false;
     } else {
       _startWatch.stop();
-      _printLog("开始录音:${_startWatch.elapsedMilliseconds}ms");
+      _printLog("开始录音(${_startWatch.elapsedMilliseconds}ms)");
       this.isRecordingNow = true;
       if (_stopCompleter == null) {
         _stopCompleter = Completer();
@@ -132,7 +131,7 @@ class _InnerPCMRecorder {
       isRecordingNow = false;
       if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
         _stopWatch.stop();
-        _printLog("结束录音:${_stopWatch.elapsedMilliseconds}ms");
+        _printLog("结束录音(${_stopWatch.elapsedMilliseconds}ms)");
         _stopCompleter?.complete();
       }
     } else {
@@ -190,7 +189,9 @@ class _InnerPCMRecorder {
     String method, [
     dynamic arguments,
   ]) async {
-    await hotRestart();
+    if (kDebugMode) {
+      await hotRestart();
+    }
     return await _channel.invokeMethod<T>(method, arguments);
   }
 }
