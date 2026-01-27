@@ -16,7 +16,8 @@ class _InnerPCMRecorder {
   Stream<Uint8List?>? _pcmStream;
   Function(Uint8List?)? _onAudioCallback;
 
-  bool isRecordingNow = false;
+  bool _isRecordingNow = false;
+  bool get isRecordingNow => _isRecordingNow;
   Completer? _stopCompleter;
 
   Stopwatch _startWatch = Stopwatch();
@@ -67,7 +68,7 @@ class _InnerPCMRecorder {
       bool autoGain = false,
       bool noiseSuppress = false,
       Function(Uint8List?)? onData}) async {
-    if (isRecordingNow) {
+    if (_isRecordingNow) {
       if (await isRecording) {
         _printLog("正在录音中");
         return true;
@@ -93,13 +94,13 @@ class _InnerPCMRecorder {
 
     if (!success) {
       _printLog("录音失败");
-      this.isRecordingNow = false;
+      this._isRecordingNow = false;
       _stopCompleter = null;
       return false;
     } else {
       _startWatch.stop();
       _printLog("开始录音(${_startWatch.elapsedMilliseconds}ms)");
-      this.isRecordingNow = true;
+      this._isRecordingNow = true;
       if (_stopCompleter == null) {
         _stopCompleter = Completer();
       }
@@ -110,14 +111,14 @@ class _InnerPCMRecorder {
   void _audioListener(Uint8List? data) {
     _onAudioCallback?.call(data);
     if (data == null) {
-      isRecordingNow = false;
+      _isRecordingNow = false;
       if (_stopCompleter != null && !_stopCompleter!.isCompleted) {
         _stopWatch.stop();
         _printLog("结束录音(${_stopWatch.elapsedMilliseconds}ms)");
         _stopCompleter?.complete();
       }
     } else {
-      isRecordingNow = true;
+      _isRecordingNow = true;
     }
   }
 
@@ -140,7 +141,7 @@ class _InnerPCMRecorder {
       await _stopCompleter!.future;
       _stopCompleter = null;
     }
-    isRecordingNow = false;
+    _isRecordingNow = false;
   }
 
   ///请求录音权限
