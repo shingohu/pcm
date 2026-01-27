@@ -75,27 +75,9 @@ class PCMPlayer {
     _cachedPlayers.add(this);
   }
 
-  String _threeDigits(int n) {
-    if (n >= 100) return "${n}";
-    if (n >= 10) return "0${n}";
-    return "00${n}";
-  }
-
-  String _twoDigits(int n) {
-    if (n >= 10) return "${n}";
-    return "0${n}";
-  }
-
   void _printLog(String message) {
     if (_enableLog) {
-      DateTime now = DateTime.now();
-      String h = _twoDigits(now.hour);
-      String min = _twoDigits(now.minute);
-      String sec = _twoDigits(now.second);
-      String ms = _threeDigits(now.millisecond);
-
-      String time = "$h:$min:$sec.$ms";
-      print("[$time][PCMPlayer][$playerId]" + message);
+      print("[${DateTime.now().toString().substring(0, 23)}][PCMPlayer]" + message);
     }
   }
 
@@ -218,7 +200,7 @@ class PCMPlayer {
     }
     return _lock.synchronized(() async {
       if (isDispose) {
-        _printLog("播放器已销毁1111");
+        _printLog("播放器已销毁");
         return;
       }
       bool printStop = _isPlayingNow;
