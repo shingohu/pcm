@@ -33,7 +33,7 @@ class _InnerPCMRecorder {
 
   void _printLog(String message) {
     if (_enableLog) {
-      print("[${DateTime.now().toString().substring(0, 23)}][PCMRecorder]" + message);
+      print("[PCMRecorder][${DateTime.now().toString().substring(0, 23).split(" ").last}]" + message);
     }
   }
 

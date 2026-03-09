@@ -77,7 +77,7 @@ class PCMPlayer {
 
   void _printLog(String message) {
     if (_enableLog) {
-      print("[${DateTime.now().toString().substring(0, 23)}][PCMPlayer]" + message);
+      print("[PCMPlayer][${DateTime.now().toString().substring(0, 23).split(" ").last}]" + message);
     }
   }
 
