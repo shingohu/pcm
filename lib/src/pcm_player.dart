@@ -77,7 +77,12 @@ class PCMPlayer {
 
   void _printLog(String message) {
     if (_enableLog) {
-      print("[PCMPlayer][${DateTime.now().toString().substring(0, 23).split(" ").last}]" + message);
+      print("[PCMPlayer][${DateTime
+          .now()
+          .toString()
+          .substring(0, 23)
+          .split(" ")
+          .last}]" + message);
     }
   }
 
@@ -127,8 +132,8 @@ class PCMPlayer {
       _startwatch.start();
       _isPlayingNow = true;
       _isPlayingNow = await _invokeMethod<bool>("startPlaying", {
-            "playerId": playerId,
-          }) ??
+        "playerId": playerId,
+      }) ??
           false;
       if (_isPlayingNow) {
         _playingFail = false;
@@ -139,6 +144,9 @@ class PCMPlayer {
           _playingFail = true;
           _printLog("播放失败");
         }
+        _invokeMethod("clearPlaying", {
+          "playerId": playerId
+        });
       }
     });
   }
@@ -175,6 +183,9 @@ class PCMPlayer {
         return;
       }
       if (!_isPlayingNow && !_playingFail) {
+        await _invokeMethod("clearPlaying", {
+          "playerId": playerId,
+        });
         return;
       }
       _playingFail = false;
@@ -283,8 +294,7 @@ class PCMPlayer {
     }
   }
 
-  static Future<T?> _invokeMethod<T>(
-    String method, [
+  static Future<T?> _invokeMethod<T>(String method, [
     dynamic arguments,
   ]) async {
     if (kDebugMode) {
