@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_recorder/flutter_recorder.dart';
 
 import 'hotrestart.dart';
 
@@ -11,12 +12,14 @@ final _InnerPCMRecorder PCMRecorder = _InnerPCMRecorder._();
 const _channel = const MethodChannel('com.lianke.pcm');
 
 class _InnerPCMRecorder {
-  final _streamChannel = const EventChannel('com.lianke.pcm.stream');
+  late final _streamChannel = const EventChannel('com.lianke.pcm.stream');
 
-  Stream<Uint8List?>? _pcmStream;
+  Timer? _intervalTimer;
+  StreamSubscription<Uint8List?>? _pcmStreamSub;
   Function(Uint8List?)? _onAudioCallback;
 
   bool _isRecordingNow = false;
+
   bool get isRecordingNow => _isRecordingNow;
   Completer? _stopCompleter;
 
@@ -25,6 +28,8 @@ class _InnerPCMRecorder {
 
   ///是否打印日志(debug模式下默认打开)
   bool _enableLog = kDebugMode;
+
+  bool get _useRecorderPlugin => Platform.isWindows;
 
   ///是否开启打印日志
   void enableLog(bool enable) {
@@ -37,17 +42,76 @@ class _InnerPCMRecorder {
     }
   }
 
-  _InnerPCMRecorder._() {
-    if (_supportPlatform()) {
-      _pcmStream = _streamChannel.receiveBroadcastStream().map((buffer) => buffer as Uint8List?);
-      _pcmStream?.listen((data) {
-        _audioListener(data);
-      });
+  _InnerPCMRecorder._();
+
+  void _addPCMStreamSubscription(int chunkBytes, Duration interval) {
+    if (_pcmStreamSub == null) {
+      if (_useRecorderPlugin) {
+        _pcmStreamSub = _splitAudioStream(Recorder.instance.uint8ListStream.map((data) => data.rawData),
+            chunkBytes: chunkBytes, interval: interval, listen: (data) {
+          _audioListener(data);
+        });
+      } else {
+        _pcmStreamSub = _streamChannel.receiveBroadcastStream().map((buffer) => buffer as Uint8List?).listen((data) {
+          _audioListener(data);
+        });
+      }
     }
   }
 
+  void _removePCMStreamSubscription() {
+    _pcmStreamSub?.cancel();
+    _pcmStreamSub = null;
+    _intervalTimer?.cancel();
+    _intervalTimer = null;
+  }
+
+  /// 音频流精准分割工具
+  /// [source] 原始流：8k 16bit 单通道，每次4096字节
+  /// [chunkBytes] 每帧固定字节数（例如 320 字节 = 20ms）
+  /// [interval] 每帧固定间隔时间（例如 Duration(milliseconds: 20)）
+  StreamSubscription<Uint8List> _splitAudioStream(
+    Stream<Uint8List> source, {
+    required int chunkBytes,
+    required Duration interval,
+    required Function(Uint8List) listen,
+  }) {
+    // 数据缓冲区
+    Uint8List? buffer;
+    // 定时输出触发器
+    _intervalTimer?.cancel();
+    _intervalTimer = Timer.periodic(interval, (timer) {
+      if (buffer != null && buffer!.length >= chunkBytes) {
+        // 取出固定长度 = 你要的一帧数据
+        final chunk = buffer!.sublist(0, chunkBytes);
+        listen(chunk);
+        // 剩余数据留在缓冲区
+        buffer = buffer!.sublist(chunkBytes);
+      }
+    });
+
+    // 1. 监听原始流，不断拼接数据
+    return source.listen(
+      (data) {
+        if (buffer == null) {
+          buffer = data;
+        } else {
+          // 拼接新数据到缓冲区
+          final newBuf = Uint8List(buffer!.length + data.length);
+          newBuf.setAll(0, buffer!);
+          newBuf.setAll(buffer!.length, data);
+          buffer = newBuf;
+        }
+      },
+      onDone: () {
+        _intervalTimer?.cancel();
+        _intervalTimer = null;
+      },
+    );
+  }
+
   bool _supportPlatform() {
-    return Platform.isIOS || Platform.isAndroid || Platform.isMacOS;
+    return Platform.isIOS || Platform.isAndroid || Platform.isMacOS || Platform.isWindows;
   }
 
   /**
@@ -79,14 +143,33 @@ class _InnerPCMRecorder {
     if (_supportPlatform()) {
       _startWatch.reset();
       _startWatch.start();
-      success = (await _invokeMethod("startRecording", {
-            "sampleRateInHz": sampleRateInHz,
-            "preFrameSize": preFrameSize,
-            "enableAEC": echoCancel,
-            "autoGain": autoGain,
-            "noiseSuppress": noiseSuppress,
-          })) ??
-          false;
+      int audioBytesToMs(int totalBytes, int sampleRate, int bits, int channel) {
+        int bytesPerSample = bits ~/ 8;
+        double sec = totalBytes / (sampleRate * bytesPerSample * channel);
+        return (sec * 1000).round();
+      }
+
+      _addPCMStreamSubscription(
+          preFrameSize, Duration(milliseconds: audioBytesToMs(preFrameSize, sampleRateInHz, 16, 1)));
+      if (_useRecorderPlugin) {
+        try {
+          await Recorder.instance.init(sampleRate: sampleRateInHz);
+          Recorder.instance.startStreamingData();
+          Recorder.instance.start();
+          success = Recorder.instance.isDeviceStarted();
+        } catch (e) {
+          _printLog(e.toString());
+        }
+      } else {
+        success = (await _invokeMethod("startRecording", {
+              "sampleRateInHz": sampleRateInHz,
+              "preFrameSize": preFrameSize,
+              "enableAEC": echoCancel,
+              "autoGain": autoGain,
+              "noiseSuppress": noiseSuppress,
+            })) ??
+            false;
+      }
     } else {
       print("not support platform");
       return false;
@@ -96,6 +179,7 @@ class _InnerPCMRecorder {
       _printLog("录音失败");
       this._isRecordingNow = false;
       _stopCompleter = null;
+      _removePCMStreamSubscription();
       return false;
     } else {
       _startWatch.stop();
@@ -125,6 +209,9 @@ class _InnerPCMRecorder {
   ///是否正在录音
   Future<bool> get isRecording async {
     if (_supportPlatform()) {
+      if (_useRecorderPlugin) {
+        return Recorder.instance.isDeviceStarted();
+      }
       return (await _invokeMethod("isRecording")) ?? false;
     }
     return false;
@@ -135,17 +222,32 @@ class _InnerPCMRecorder {
     if (_supportPlatform()) {
       _stopWatch.reset();
       _stopWatch.start();
-      await _invokeMethod("stopRecording");
+      if (_useRecorderPlugin) {
+        bool isRecording = Recorder.instance.isDeviceStarted();
+        if (isRecording) {
+          Recorder.instance.stopStreamingData();
+        }
+        Recorder.instance.deinit();
+        if (isRecording) {
+          _audioListener(null);
+        }
+      } else {
+        await _invokeMethod("stopRecording");
+      }
     }
     if (_stopCompleter != null) {
       await _stopCompleter!.future;
       _stopCompleter = null;
     }
+    _removePCMStreamSubscription();
     _isRecordingNow = false;
   }
 
   ///请求录音权限
   Future<bool> requestRecordPermission() async {
+    if (Platform.isWindows || Platform.isMacOS) {
+      return true;
+    }
     if (_supportPlatform()) {
       return (await _invokeMethod<bool>("requestRecordPermission")) ?? false;
     }
@@ -154,6 +256,9 @@ class _InnerPCMRecorder {
 
   ///检查录音权限
   Future<bool> checkRecordPermission() async {
+    if (Platform.isWindows || Platform.isMacOS) {
+      return true;
+    }
     if (_supportPlatform()) {
       return (await _invokeMethod<bool>("checkRecordPermission")) ?? false;
     }
